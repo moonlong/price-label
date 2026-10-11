@@ -2,7 +2,7 @@
 
 /** 客户名 + 敬称「様」（仅用于打印便签，界面仍显示原名）。 */
 export function honorific(name) {
-  return `${name} 様`;
+  return `${name}様`;
 }
 
 /** 千分位格式化（整数，含负号处理）。 */
