@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>商品结算打印</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="app">
+    <div class="customer-picker">
+      <input id="customer-search" class="customer-search" type="text" placeholder="🔍 编号 / 名字" autocomplete="off" />
+      <ul id="customer-pick-list" class="customer-pick-list"></ul>
+    </div>
+    <header class="topbar">
+      <div class="selects">
+        <select id="group" aria-label="枚目"></select>
+      </div>
+      <button id="connect" class="connect" type="button">
+        <span id="connect-dot" class="dot"></span>
+        <span id="connect-label">连接打印机</span>
+      </button>
+    </header>
+
+    <div class="printer-row">
+      <span id="printer-status" class="printer-status">打印机未连接</span>
+      <label for="protocol" class="proto-label">打印协议：</label>
+      <select id="protocol" class="proto-select">
+        <option value="tspl-rast" selected>TSPL 位图（推荐）</option>
+        <option value="tspl">TSPL 文字</option>
+        <option value="cpcl">CPCL</option>
+        <option value="escpos">ESC-POS 位图</option>
+      </select>
+    </div>
+
+    <section class="records-card">
+      <div class="records-head" id="records-head">当前枚目记录</div>
+      <ol id="records" class="records"></ol>
+      <div class="subtotal">
+        <span class="subtotal-label">小计</span>
+        <span id="subtotal" class="subtotal-value">0円</span>
+      </div>
+    </section>
+
+    <section class="input-card">
+      <input id="input" type="text" readonly autocomplete="off" inputmode="none" placeholder="输入金额或算式" />
+    </section>
+
+    <section class="keypad">
+      <div class="key-row">
+        <button class="key" data-key="7">7</button>
+        <button class="key" data-key="8">8</button>
+        <button class="key" data-key="9">9</button>
+        <button class="key op" data-key="÷">÷</button>
+      </div>
+      <div class="key-row">
+        <button class="key" data-key="4">4</button>
+        <button class="key" data-key="5">5</button>
+        <button class="key" data-key="6">6</button>
+        <button class="key op" data-key="×">×</button>
+      </div>
+      <div class="key-row">
+        <button class="key" data-key="1">1</button>
+        <button class="key" data-key="2">2</button>
+        <button class="key" data-key="3">3</button>
+        <button class="key op" data-key="−">−</button>
+      </div>
+      <div class="key-row">
+        <button class="key zero" data-key="0">0</button>
+        <button class="key" data-key="+">+</button>
+        <button class="key back" data-key="back">⌫</button>
+      </div>
+      <div class="key-row key-actions">
+        <button id="accumulate" class="key accumulate">计入</button>
+        <button id="undo" class="key undo">撤销</button>
+      </div>
+    </section>
+
+    <section class="verify-area" id="verify-area" hidden>
+      <div id="verify-msg" class="verify-msg"></div>
+      <div class="verify-cover"><div id="verify-fill" class="verify-fill"></div></div>
+    </section>
+
+    <section class="action-row">
+      <button id="finish" class="action finish">本组结束</button>
+    </section>
+
+    <section class="summary-card">
+      <div class="records-head">本单汇总</div>
+      <ol id="summary" class="summary"></ol>
+      <div class="grand-total">
+        <span class="grand-total-label">本单合计</span>
+        <span id="grand-total" class="grand-total-value">0円</span>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <button id="manage" class="link-btn">客户管理 / 导入导出</button>
+      <button id="history" class="link-btn">结算历史</button>
+      <button id="clear" class="danger-btn">清 空</button>
+    </footer>
+  </main>
+
+  <!-- 打印预览弹窗 -->
+  <dialog id="dlg-print" class="dialog">
+    <div class="dialog-title">打印预览（与实际打印一致）</div>
+    <div id="print-verified" class="print-verified" hidden>
+      <div class="pv-bar"></div>
+      <div class="pv-text">✓ 两次一致 <span id="print-verified-amount"></span></div>
+    </div>
+    <div id="print-warning" class="print-warning" hidden>⚠ 将结束本客户的结算，请确认已完成所有组的录入</div>
+    <div id="print-preview" class="print-preview"></div>
+    <label class="last-toggle">
+      <input type="checkbox" id="last-group-toggle" />
+      <span>最后一组（附合计）</span>
+    </label>
+    <div class="dialog-actions">
+      <button id="print-cancel" class="btn ghost">取消</button>
+      <button id="print-ok" class="btn primary">打印</button>
+    </div>
+  </dialog>
+
+  <!-- 清空弹窗 -->
+  <dialog id="dlg-clear" class="dialog">
+    <div class="dialog-title">清空（防误操作）</div>
+    <div class="dialog-body">请选择清空范围：</div>
+    <div class="dialog-actions stack">
+      <button id="clear-group" class="btn warn">本组</button>
+      <button id="clear-all" class="btn danger">全部（当前客户）</button>
+      <button id="clear-cancel" class="btn ghost">取消</button>
+    </div>
+  </dialog>
+
+  <!-- 客户管理弹窗 -->
+  <dialog id="dlg-manage" class="dialog wide">
+    <div class="dialog-title">客户管理 / 导入导出</div>
+    <div class="dialog-body">
+      <div class="manage-row">
+        <input id="new-customer" type="text" placeholder="新增客户名" />
+        <button id="add-customer" class="btn primary">添加</button>
+      </div>
+      <ul id="customer-list" class="customer-list"></ul>
+      <hr />
+      <div class="manage-row">
+        <button id="export-config" class="btn">导出 JSON</button>
+        <label class="btn file-label">导入 JSON 文件
+          <input id="import-file" type="file" accept=".json,application/json" />
+        </label>
+      </div>
+      <textarea id="import-text" rows="6" placeholder="或在此粘贴 JSON 后点“应用导入”"></textarea>
+      <button id="import-apply" class="btn primary full">应用导入</button>
+    </div>
+    <div class="dialog-actions">
+      <button id="manage-close" class="btn ghost">关闭</button>
+    </div>
+  </dialog>
+
+  <!-- 确认弹窗（通用） -->
+  <dialog id="dlg-confirm" class="dialog">
+    <div class="dialog-title">提醒</div>
+    <div id="confirm-msg" class="dialog-body"></div>
+    <div class="dialog-actions">
+      <button id="confirm-cancel" class="btn ghost">取消</button>
+      <button id="confirm-ok" class="btn warn">继续</button>
+    </div>
+  </dialog>
+
+  <!-- 结算历史弹窗 -->
+  <dialog id="dlg-history" class="dialog wide">
+    <div class="dialog-title">结算历史</div>
+    <div class="dialog-body">
+      <div class="history-filter-row">
+        <label for="history-filter">范围：</label>
+        <select id="history-filter">
+          <option value="recent24" selected>最近24小时</option>
+          <option value="all">全部</option>
+        </select>
+      </div>
+      <ol id="history-list" class="history-list"></ol>
+      <div class="dialog-actions">
+        <button id="history-export" class="btn primary">导出 CSV</button>
+        <button id="history-close" class="btn ghost">关闭</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

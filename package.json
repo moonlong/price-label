@@ -1,0 +1,11 @@
+{
+  "name": "price-label-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "商品结算打印 App（浏览器版，安卓 Chrome + Web 蓝牙）",
+  "scripts": {
+    "serve": "node server.mjs",
+    "test": "node --test test/"
+  }
+}
