@@ -337,7 +337,9 @@ function renderCustomerPick() {
   if (items.length === 0) {
     const li = document.createElement('li');
     li.className = 'empty-pick';
-    li.textContent = '无匹配客户';
+    li.textContent = store.getCustomers().length === 0
+      ? '请先在下方「客户管理 / 导入导出」导入客户名单'
+      : '无匹配客户';
     el.customerList.appendChild(li);
   }
 

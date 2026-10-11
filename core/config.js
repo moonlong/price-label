@@ -4,21 +4,13 @@ export const DEFAULT_LABEL = Object.freeze({ widthMm: 40, heightMm: 30 });
 // 打印微调：offsetXmm 负=左移、正=右移；offsetYmm 负=上移、正=下移（默认整体略左移 1.5mm）
 export const DEFAULT_PRINT = Object.freeze({ offsetXmm: -1.5, offsetYmm: 0 });
 
-// 50 个常用日文姓氏（编号 1~50）
-const DEFAULT_NAMES = [
-  '佐藤', '鈴木', '高橋', '田中', '伊藤', '渡辺', '山本', '中村', '小林', '加藤',
-  '吉田', '山田', '佐々木', '山口', '松本', '井上', '木村', '林', '斎藤', '清水',
-  '山崎', '森', '池田', '橋本', '阿部', '石川', '山下', '中島', '前田', '藤田',
-  '後藤', '小川', '岡田', '村上', '長谷川', '近藤', '石井', '斉藤', '坂本', '遠藤',
-  '青木', '藤井', '西村', '福田', '太田', '三浦', '藤原', '岡本', '松田', '中川',
-];
-
+// 默认配置：客户名单为空（干净版本，客户数据一律由「本地导入」提供，避免误用/覆盖）。
 export function createDefaultConfig() {
   return {
     version: 1,
     label: { ...DEFAULT_LABEL },
     print: { ...DEFAULT_PRINT },
-    customers: DEFAULT_NAMES.map((name, i) => ({ no: i + 1, name, favorite: false })),
+    customers: [],
   };
 }
 

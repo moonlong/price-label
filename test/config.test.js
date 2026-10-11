@@ -2,13 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createDefaultConfig, validateConfig } from '../core/config.js';
 
-test('默认配置：50 个日文客户（编号 1~50），标签 40×30', () => {
+test('默认配置：客户为空（干净版），标签 40×30', () => {
   const c = createDefaultConfig();
-  assert.equal(c.customers.length, 50);
-  assert.equal(c.customers[0].no, 1);
-  assert.equal(c.customers[0].name, '佐藤');
-  assert.equal(c.customers[49].no, 50);
-  assert.equal(c.customers[49].name, '中川');
+  assert.equal(c.customers.length, 0);
   assert.deepEqual(c.label, { widthMm: 40, heightMm: 30 });
 });
 
