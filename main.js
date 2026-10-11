@@ -53,6 +53,7 @@ const el = {
   importText: $('import-text'),
   importApply: $('import-apply'),
   importFile: $('import-file'),
+  clearData: $('clear-data'),
   manageClose: $('manage-close'),
   dlgConfirm: $('dlg-confirm'),
   confirmMsg: $('confirm-msg'),
@@ -301,8 +302,7 @@ function renderCustomerPick() {
       star.className = 'star' + (c.favorite ? ' on' : '');
       star.textContent = c.favorite ? '★' : '☆';
       star.type = 'button';
-      star.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
+      star.addEventListener('click', (e) => {
         e.stopPropagation();
         store.toggleFavorite(c.no);
         renderCustomerPick();
@@ -310,8 +310,8 @@ function renderCustomerPick() {
       li.append(star);
     }
 
-    li.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
+    // 用 click 而非 pointerdown：浏览器自动区分「点 vs 滑」，滑动不会误选中
+    li.addEventListener('click', () => {
       if (collapsed) {
         if (locked) {
           toast('完成本客户结算，或清空本客户，才能换客户', 5000);
@@ -643,11 +643,15 @@ el.customerSearch.addEventListener('input', () => {
   renderCustomerPick();
 });
 
-el.customerSearch.addEventListener('blur', () => {
-  if (picking) {
-    picking = false;
-    renderCustomerPick();
-  }
+el.customerSearch.addEventListener('blur', (e) => {
+  // 焦点移到列表内（如星标按钮）时不折叠；否则延迟折叠，给 click 留出触发时间
+  if (e.relatedTarget && el.customerList.contains(e.relatedTarget)) return;
+  setTimeout(() => {
+    if (picking) {
+      picking = false;
+      renderCustomerPick();
+    }
+  }, 150);
 });
 
 el.group.addEventListener('change', () => {
@@ -701,6 +705,13 @@ el.manage.addEventListener('click', () => {
 });
 
 el.manageClose.addEventListener('click', () => el.dlgManage.close());
+
+el.clearData.addEventListener('click', async () => {
+  const ok = await confirmDialog('将清空本机全部数据（客户名单、结算历史、星标等），确认？');
+  if (!ok) return;
+  if (storage) storage.clear();
+  location.reload();
+});
 
 el.addCustomer.addEventListener('click', () => {
   const r = store.addCustomer(el.newCustomer.value);
