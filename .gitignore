@@ -1,1 +1,6 @@
 .DS_Store
+
+# 私有客户数据：禁止上传到远端（万一被拷进仓库也不会被提交）
+*客户名单*.json
+*customers*.json
+*private*.json
