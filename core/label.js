@@ -1,4 +1,9 @@
-// 便签内容：千分位、日元单位、日语（枚目/合計）、日期格式 YYYY/MM/DD。
+// 便签内容：千分位、日元单位、日语（枚目/合計/様）、日期格式 YYYY/MM/DD。
+
+/** 客户名 + 敬称「様」（仅用于打印便签，界面仍显示原名）。 */
+export function honorific(name) {
+  return `${name} 様`;
+}
 
 /** 千分位格式化（整数，含负号处理）。 */
 export function formatMoney(value) {
@@ -32,7 +37,7 @@ export function buildGroupLabel(customerName, groupNo, groupTotal, date = format
     groupTotal,
     date,
     lines: [
-      { role: 'customer', text: customerName },
+      { role: 'customer', text: honorific(customerName) },
       { role: 'group', text: `${groupNo}枚目: ${formatMoney(groupTotal)}円` },
     ],
   };
@@ -48,7 +53,7 @@ export function buildTotalLabel(customerName, groupNo, groupTotal, grandTotal, d
     grandTotal,
     date,
     lines: [
-      { role: 'customer', text: customerName },
+      { role: 'customer', text: honorific(customerName) },
       { role: 'group', text: `${groupNo}枚目: ${formatMoney(groupTotal)}円` },
       { role: 'total', text: `合計: ${formatMoney(grandTotal)}円` },
     ],

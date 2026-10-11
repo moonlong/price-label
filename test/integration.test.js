@@ -33,7 +33,7 @@ test('完整结算流程（客户用例：NOE，三枚目）', () => {
   const g1 = s.finishGroup();
   assert.equal(g1.action, 'done');
   assert.equal(g1.groupTotal, 10000);
-  assert.equal(labelToPlainText(g1.label), 'NOE\n1枚目: 10,000円\n' + g1.label.date);
+  assert.equal(labelToPlainText(g1.label), 'NOE 様\n1枚目: 10,000円\n' + g1.label.date);
   s.commitGroup(g1.groupNo);
   assert.equal(s.currentGroup(), 2);
 
@@ -53,7 +53,7 @@ test('完整结算流程（客户用例：NOE，三枚目）', () => {
   // 本单合计 = 已打印的 1、2 枚目（不含进行中的 3枚目）
   assert.equal(s.grandTotal(), 20000);
   const totalLabel = s.totalLabel(g3.groupNo, g3.groupTotal);
-  assert.equal(labelToPlainText(totalLabel), 'NOE\n3枚目: 1,234円\n合計: 21,234円\n' + totalLabel.date);
+  assert.equal(labelToPlainText(totalLabel), 'NOE 様\n3枚目: 1,234円\n合計: 21,234円\n' + totalLabel.date);
 
   const t = s.finalizeTotal(g3.groupNo, g3.groupTotal);
   assert.equal(t.grandTotal, 21234);
@@ -68,7 +68,7 @@ test('完整结算流程（客户用例：NOE，三枚目）', () => {
   // 补打合计标签
   const rt = s.reprintTotal();
   assert.equal(rt.ok, true);
-  assert.equal(labelToPlainText(rt.label), 'NOE\n3枚目: 1,234円\n合計: 21,234円\n' + t.lastOrder.date);
+  assert.equal(labelToPlainText(rt.label), 'NOE 様\n3枚目: 1,234円\n合計: 21,234円\n' + t.lastOrder.date);
 });
 
 test('单组场景：一组直接附合计结束', () => {
@@ -81,7 +81,7 @@ test('单组场景：一组直接附合计结束', () => {
   assert.equal(g1.action, 'done');
   const r = s.finalizeTotal(g1.groupNo, g1.groupTotal);
   assert.equal(r.grandTotal, 1234);
-  assert.equal(labelToPlainText(r.label), 'NOE\n1枚目: 1,234円\n合計: 1,234円\n' + r.label.date);
+  assert.equal(labelToPlainText(r.label), 'NOE 様\n1枚目: 1,234円\n合計: 1,234円\n' + r.label.date);
   assert.equal(s.hasAnyData(), false);
 });
 
@@ -107,5 +107,5 @@ test('补打任意已完成枚目', () => {
   s.commitGroup(s.finishGroup().groupNo);
   const r = s.reprintGroup(1);
   assert.equal(r.ok, true);
-  assert.equal(labelToPlainText(r.label), 'NOE\n1枚目: 10,000円\n' + r.label.date);
+  assert.equal(labelToPlainText(r.label), 'NOE 様\n1枚目: 10,000円\n' + r.label.date);
 });
