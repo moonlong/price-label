@@ -39,6 +39,9 @@ const el = {
   printVerifiedAmount: $('print-verified-amount'),
   printWarning: $('print-warning'),
   lastGroupToggle: $('last-group-toggle'),
+  deductBox: $('deduct-box'),
+  deductType: $('deduct-type'),
+  deductAmount: $('deduct-amount'),
   printOk: $('print-ok'),
   printCancel: $('print-cancel'),
   dlgClear: $('dlg-clear'),
@@ -458,13 +461,30 @@ function renderInput() {
   el.input.value = expr;
 }
 
+/** 读取扣除选择 → printContext.deduction，并刷新预览。 */
+function updateDeduction() {
+  if (!printContext) return;
+  const type = el.deductType.value;
+  const amount = Math.max(0, Math.trunc(Number(el.deductAmount.value) || 0));
+  printContext.deduction = (type !== 'none' && amount > 0) ? { type, amount } : null;
+  renderPrintPreview();
+}
+
+/** 打开打印弹窗时，重置扣除为「无」。 */
+function resetDeductionUI() {
+  el.deductType.value = 'none';
+  el.deductAmount.value = '';
+  el.deductAmount.disabled = true;
+  el.deductBox.hidden = true;
+}
+
 // ---------- 打印预览 ----------
 function renderPrintPreview() {
   el.printPreview.innerHTML = '';
   if (!printContext) return;
   let label;
   if (printContext.isTotal) {
-    label = store.totalLabel(printContext.groupNo, printContext.groupTotal);
+    label = store.totalLabel(printContext.groupNo, printContext.groupTotal, printContext.deduction);
   } else {
     label = printContext.groupLabel;
   }
@@ -502,7 +522,7 @@ async function onPrintOk() {
   let label;
   let doneName = null;
   if (printContext.isTotal) {
-    const res = store.finalizeTotal(printContext.groupNo, printContext.groupTotal);
+    const res = store.finalizeTotal(printContext.groupNo, printContext.groupTotal, printContext.deduction);
     if (!res.ok) return toast(res.error);
     label = res.label;
     doneName = res.lastOrder.customerName;
@@ -516,9 +536,10 @@ async function onPrintOk() {
 }
 
 function openFinishPrint(r, verified = false) {
-  printContext = { mode: 'finish', groupNo: r.groupNo, groupTotal: r.groupTotal, groupLabel: r.label, isTotal: false };
+  printContext = { mode: 'finish', groupNo: r.groupNo, groupTotal: r.groupTotal, groupLabel: r.label, isTotal: false, deduction: null };
   el.lastGroupToggle.checked = false;
   el.lastGroupToggle.closest('.last-toggle').style.display = '';
+  resetDeductionUI();
   if (verified) {
     el.printVerified.hidden = false;
     el.printVerifiedAmount.textContent = `¥${formatMoney(r.groupTotal)}`;
@@ -532,9 +553,10 @@ function openFinishPrint(r, verified = false) {
 }
 
 function openReprintPrint(r, showToggle = false) {
-  printContext = { mode: 'reprint', groupNo: r.groupNo, groupTotal: r.groupTotal, groupLabel: r.label, isTotal: false };
+  printContext = { mode: 'reprint', groupNo: r.groupNo, groupTotal: r.groupTotal, groupLabel: r.label, isTotal: false, deduction: null };
   el.lastGroupToggle.checked = false;
   el.lastGroupToggle.closest('.last-toggle').style.display = showToggle ? '' : 'none';
+  resetDeductionUI();
   el.printVerified.hidden = true;
   renderPrintPreview();
   el.printOk.onclick = onPrintOk;
@@ -626,8 +648,31 @@ el.finish.addEventListener('click', () => {
 
 el.lastGroupToggle.addEventListener('change', () => {
   printContext.isTotal = el.lastGroupToggle.checked;
+  if (printContext.isTotal) {
+    el.deductBox.hidden = false;
+  } else {
+    resetDeductionUI();
+    printContext.deduction = null;
+  }
   renderPrintPreview();
 });
+
+el.deductType.addEventListener('change', () => {
+  const type = el.deductType.value;
+  if (type === 'maekin') {
+    el.deductAmount.value = '6000';
+    el.deductAmount.disabled = false;
+  } else if (type === 'none') {
+    el.deductAmount.value = '';
+    el.deductAmount.disabled = true;
+  } else {
+    el.deductAmount.value = '';
+    el.deductAmount.disabled = false;
+  }
+  updateDeduction();
+});
+
+el.deductAmount.addEventListener('input', updateDeduction);
 
 el.customerSearch.addEventListener('focus', () => {
   if (store.hasSettledGroup()) return; // 锁定中不可重选

@@ -43,14 +43,34 @@ export function buildGroupLabel(customerName, groupNo, groupTotal, date = format
   };
 }
 
+/** 扣除类型 → 便签文案。 */
+const DEDUCT_LABELS = { maekin: '前金', henkin: '返金', zandaka: '前回残高' };
+
 /** 合计便签：客户名 + N枚目: 价格 + 合計: 总额。
- *  当 opts.singleGroup 为真（本单只有一个枚目）时，省略「N枚目」行——数值与合计相同，避免重复。 */
+ *  当 opts.singleGroup 为真（本单只有一个枚目）时，省略「N枚目」行——数值与合计相同，避免重复。
+ *  opts.deduction = { type: 'maekin'|'henkin'|'zandaka', amount } 时，追加扣除行与结果行（残金/残高）。 */
 export function buildTotalLabel(customerName, groupNo, groupTotal, grandTotal, date = formatDate(), opts = {}) {
   const lines = [{ role: 'customer', text: honorific(customerName) }];
   if (!opts.singleGroup) {
     lines.push({ role: 'group', text: `${groupNo}枚目: ${formatMoney(groupTotal)}円` });
   }
   lines.push({ role: 'total', text: `合計: ${formatMoney(grandTotal)}円` });
+
+  let deduction = null;
+  let net = null;
+  const ded = opts.deduction;
+  if (ded && DEDUCT_LABELS[ded.type]) {
+    const amount = Math.max(0, Math.trunc(Number(ded.amount) || 0));
+    if (amount > 0) {
+      deduction = { type: ded.type, amount };
+      lines.push({ role: 'deduct', text: `${DEDUCT_LABELS[ded.type]}: -${formatMoney(amount)}円` });
+      net = grandTotal - amount;
+      if (net > 0) lines.push({ role: 'net', text: `残金: ${formatMoney(net)}円` });
+      else if (net < 0) lines.push({ role: 'net', text: `残高: ${formatMoney(-net)}円` });
+      else lines.push({ role: 'net', text: `残金: 0円` });
+    }
+  }
+
   return {
     kind: 'total',
     customerName,
@@ -59,6 +79,8 @@ export function buildTotalLabel(customerName, groupNo, groupTotal, grandTotal, d
     grandTotal,
     date,
     singleGroup: !!opts.singleGroup,
+    deduction,
+    net,
     lines,
   };
 }

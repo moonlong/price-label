@@ -349,22 +349,22 @@ export class Store {
     return { ok: true };
   }
 
-  /** 合计预览标签（不改变状态）：本组 + 总额（含当前组）。 */
-  totalLabel(groupNo, groupTotal) {
+  /** 合计预览标签（不改变状态）：本组 + 总额（含当前组）。deduction 可选。 */
+  totalLabel(groupNo, groupTotal, deduction = null) {
     const g = this._group(groupNo);
     const counted = g && (g.status === 'done' || g.status === 'dirty');
     const total = this.grandTotal() + (counted ? 0 : groupTotal);
     const groupCount = this.summary().length + (counted ? 0 : 1);
-    return buildTotalLabel(this.customerName(), groupNo, groupTotal, total, formatDate(), { singleGroup: groupCount === 1 });
+    return buildTotalLabel(this.customerName(), groupNo, groupTotal, total, formatDate(), { singleGroup: groupCount === 1, deduction });
   }
 
-  /** 合计打印：标记当前组完成、归档最近一单、清空、追加历史（含组明细）。 */
-  finalizeTotal(groupNo, groupTotal) {
+  /** 合计打印：标记当前组完成、归档最近一单、清空、追加历史（含组明细）。deduction 可选。 */
+  finalizeTotal(groupNo, groupTotal, deduction = null) {
     this.commitGroup(groupNo);
     const total = this.grandTotal();
     const customerName = this.customerName();
     const groupSummary = this.summary().map((s) => ({ group: s.group, subtotal: s.subtotal }));
-    const label = buildTotalLabel(customerName, groupNo, groupTotal, total, formatDate(), { singleGroup: groupSummary.length === 1 });
+    const label = buildTotalLabel(customerName, groupNo, groupTotal, total, formatDate(), { singleGroup: groupSummary.length === 1, deduction });
     this.lastOrder = {
       customerNo: this.session.customerNo,
       customerName,

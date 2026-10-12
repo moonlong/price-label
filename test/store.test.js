@@ -153,6 +153,35 @@ test('合计：totalLabel + finalizeTotal 归档并清空', () => {
   assert.equal(s.hasAnyData(), false);
 });
 
+test('合计扣除：前金/返金/前回残高 → 残金/残高', () => {
+  const s = fresh();
+  s.addEntry('1000'); s.commitGroup(s.finishGroup().groupNo); // 1枚目 1000
+  s.addEntry('2000'); const g2 = s.finishGroup(); // 总 3000
+  const linesOf = (d) => s.totalLabel(g2.groupNo, g2.groupTotal, d).lines.map((l) => l.text);
+
+  assert.deepEqual(linesOf(null), ['NOE様', '2枚目: 2,000円', '合計: 3,000円']);
+
+  assert.deepEqual(linesOf({ type: 'maekin', amount: 1000 }), [
+    'NOE様', '2枚目: 2,000円', '合計: 3,000円', '前金: -1,000円', '残金: 2,000円',
+  ]);
+  assert.deepEqual(linesOf({ type: 'maekin', amount: 3000 }), [
+    'NOE様', '2枚目: 2,000円', '合計: 3,000円', '前金: -3,000円', '残金: 0円',
+  ]);
+  assert.deepEqual(linesOf({ type: 'maekin', amount: 5000 }), [
+    'NOE様', '2枚目: 2,000円', '合計: 3,000円', '前金: -5,000円', '残高: 2,000円',
+  ]);
+
+  assert.equal(linesOf({ type: 'henkin', amount: 500 })[3], '返金: -500円');
+  assert.equal(linesOf({ type: 'zandaka', amount: 500 })[3], '前回残高: -500円');
+});
+
+test('单组 + 扣除：枚目行仍省略，扣除行正常', () => {
+  const s = fresh();
+  s.addEntry('1000'); const g1 = s.finishGroup();
+  const lines = s.totalLabel(g1.groupNo, g1.groupTotal, { type: 'maekin', amount: 600 }).lines.map((l) => l.text);
+  assert.deepEqual(lines, ['NOE様', '合計: 1,000円', '前金: -600円', '残金: 400円']);
+});
+
 test('历史记录：合计后追加（含时间），导出 CSV', () => {
   const s = fresh();
   s.addEntry('1000'); s.commitGroup(s.finishGroup().groupNo);

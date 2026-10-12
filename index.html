@@ -115,6 +115,16 @@
       <input type="checkbox" id="last-group-toggle" />
       <span>最后一组（附合计）</span>
     </label>
+    <div id="deduct-box" class="deduct-box" hidden>
+      <label for="deduct-type">扣除：</label>
+      <select id="deduct-type">
+        <option value="none" selected>无</option>
+        <option value="maekin">前金</option>
+        <option value="henkin">返金</option>
+        <option value="zandaka">前回残高</option>
+      </select>
+      <input id="deduct-amount" type="number" inputmode="numeric" min="0" step="1" placeholder="金额" disabled />
+    </div>
     <div class="dialog-actions">
       <button id="print-cancel" class="btn ghost">取消</button>
       <button id="print-ok" class="btn primary">打印</button>
