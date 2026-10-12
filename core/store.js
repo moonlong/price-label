@@ -354,7 +354,8 @@ export class Store {
     const g = this._group(groupNo);
     const counted = g && (g.status === 'done' || g.status === 'dirty');
     const total = this.grandTotal() + (counted ? 0 : groupTotal);
-    return buildTotalLabel(this.customerName(), groupNo, groupTotal, total);
+    const groupCount = this.summary().length + (counted ? 0 : 1);
+    return buildTotalLabel(this.customerName(), groupNo, groupTotal, total, formatDate(), { singleGroup: groupCount === 1 });
   }
 
   /** 合计打印：标记当前组完成、归档最近一单、清空、追加历史（含组明细）。 */
@@ -362,8 +363,8 @@ export class Store {
     this.commitGroup(groupNo);
     const total = this.grandTotal();
     const customerName = this.customerName();
-    const label = buildTotalLabel(customerName, groupNo, groupTotal, total);
     const groupSummary = this.summary().map((s) => ({ group: s.group, subtotal: s.subtotal }));
+    const label = buildTotalLabel(customerName, groupNo, groupTotal, total, formatDate(), { singleGroup: groupSummary.length === 1 });
     this.lastOrder = {
       customerNo: this.session.customerNo,
       customerName,

@@ -81,7 +81,7 @@ test('单组场景：一组直接附合计结束', () => {
   assert.equal(g1.action, 'done');
   const r = s.finalizeTotal(g1.groupNo, g1.groupTotal);
   assert.equal(r.grandTotal, 1234);
-  assert.equal(labelToPlainText(r.label), 'NOE様\n1枚目: 1,234円\n合計: 1,234円\n' + r.label.date);
+  assert.equal(labelToPlainText(r.label), 'NOE様\n合計: 1,234円\n' + r.label.date);
   assert.equal(s.hasAnyData(), false);
 });
 
