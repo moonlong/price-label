@@ -168,7 +168,7 @@ html, body {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 150px;
+  height: 150px;
   overflow-y: auto;
   font-variant-numeric: tabular-nums;
 }
