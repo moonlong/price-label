@@ -65,9 +65,9 @@ export function buildTotalLabel(customerName, groupNo, groupTotal, grandTotal, d
       deduction = { type: ded.type, amount };
       lines.push({ role: 'deduct', text: `${DEDUCT_LABELS[ded.type]}: -${formatMoney(amount)}円` });
       net = grandTotal - amount;
-      if (net > 0) lines.push({ role: 'net', text: `残金: ${formatMoney(net)}円` });
+      if (net > 0) lines.push({ role: 'net', text: `${formatMoney(net)}円` });
       else if (net < 0) lines.push({ role: 'net', text: `残高: ${formatMoney(-net)}円` });
-      else lines.push({ role: 'net', text: `残金: 0円` });
+      else lines.push({ role: 'net', text: `0円` });
     }
   }
 
