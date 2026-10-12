@@ -52,38 +52,35 @@
         <button class="key" data-key="7">7</button>
         <button class="key" data-key="8">8</button>
         <button class="key" data-key="9">9</button>
-        <button class="key op" data-key="÷">÷</button>
+        <button class="key back" data-key="back">⌫</button>
       </div>
       <div class="key-row">
         <button class="key" data-key="4">4</button>
         <button class="key" data-key="5">5</button>
         <button class="key" data-key="6">6</button>
-        <button class="key op" data-key="×">×</button>
+        <button class="key op" data-key="÷">÷</button>
       </div>
       <div class="key-row">
         <button class="key" data-key="1">1</button>
         <button class="key" data-key="2">2</button>
         <button class="key" data-key="3">3</button>
-        <button class="key op" data-key="−">−</button>
+        <button class="key op" data-key="×">×</button>
       </div>
       <div class="key-row">
-        <button class="key zero" data-key="0">0</button>
         <button class="key" data-key="+">+</button>
-        <button class="key back" data-key="back">⌫</button>
+        <button class="key" data-key="−">−</button>
+        <button class="key" data-key="0">0</button>
+        <button id="accumulate" class="key accumulate">计入</button>
       </div>
       <div class="key-row key-actions">
         <button id="undo" class="key undo">撤销</button>
-        <button id="accumulate" class="key accumulate">计入</button>
+        <button id="finish" class="key finish">本组结束</button>
       </div>
     </section>
 
     <section class="verify-area" id="verify-area" hidden>
       <div id="verify-msg" class="verify-msg"></div>
       <div class="verify-cover"><div id="verify-fill" class="verify-fill"></div></div>
-    </section>
-
-    <section class="action-row">
-      <button id="finish" class="action finish">本组结束</button>
     </section>
 
     <section class="summary-card">

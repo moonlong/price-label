@@ -229,22 +229,7 @@ html, body {
 .key.back { background: #fef2f2; color: var(--red); }
 .key.accumulate { background: var(--blue); color: #fff; border: none; font-size: 20px; }
 .key.undo { background: #fef9c3; color: #854d0e; border: none; font-size: 18px; }
-.key.zero { grid-column: span 2; }
-
-/* 主操作 */
-.action-row { display: block; }
-.action {
-  width: 100%;
-  padding: 22px 0;
-  font-size: 24px;
-  font-weight: 800;
-  border: none;
-  border-radius: 14px;
-  color: #fff;
-  cursor: pointer;
-}
-.action:active { filter: brightness(0.95); }
-.action.finish { background: var(--green); }
+.key.finish { background: var(--green); color: #fff; border: none; font-size: 20px; font-weight: 700; }
 
 /* 双录核对区 */
 .verify-area {
