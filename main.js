@@ -391,6 +391,8 @@ function renderRecords() {
     li.append(s1, s2);
     el.records.appendChild(li);
   }
+  // 保持最新一条可见（列表内部滚动，不推动键盘）
+  el.records.scrollTop = el.records.scrollHeight;
 }
 
 function renderSubtotal() {
