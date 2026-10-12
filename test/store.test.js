@@ -33,6 +33,19 @@ test('累加与撤销', () => {
   assert.equal(u.subtotal, 300);
 });
 
+test('0 与 00 不能计入（金额不能为 0）', () => {
+  const s = fresh();
+  assert.equal(s.addEntry('0').ok, false);
+  assert.equal(s.addEntry('0').error, '金额不能为 0');
+  assert.equal(s.addEntry('00').ok, false);
+  assert.equal(s.currentEntries().length, 0); // 都没计入
+
+  // 但 0 作为数字一部分是合法的
+  assert.equal(s.addEntry('50').ok, true);
+  assert.equal(s.addEntry('500').ok, true);
+  assert.equal(s.currentSubtotal(), 550);
+});
+
 test('取消打印不标记已打印：finishGroup 不改变状态', () => {
   const s = fresh();
   s.addEntry('1000');

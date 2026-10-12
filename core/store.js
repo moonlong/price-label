@@ -223,6 +223,7 @@ export class Store {
     const g = this._ensureGroup(this.session.group);
     const ev = evaluateExpression(expr);
     if (!ev.ok) return ev;
+    if (ev.value === 0) return { ok: false, error: '金额不能为 0' };
     const entry = { expr: String(expr).trim(), value: ev.value };
     g.entries.push(entry);
     if (g.status === 'done') g.status = 'dirty'; // 已打印的枚目追加金额 → 需重打
