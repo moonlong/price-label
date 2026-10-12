@@ -476,21 +476,21 @@ function renderPrintPreview() {
     d.textContent = '预览渲染失败：' + (e && e.message ? e.message : e);
     el.printPreview.appendChild(d);
   }
-  // 警告横幅：仅「本组结束」流程勾选最后一组时显示
-  el.printWarning.hidden = !(printContext.mode === 'finish' && printContext.isTotal);
+  // 只要勾选「最后一组」就提醒（本组结束 / 补打最后一组 都会完成本单）
+  el.printWarning.hidden = !printContext.isTotal;
 }
 
 async function onPrintOk() {
-  if (printContext.mode === 'reprint') {
+  // 补打「本组」：只打印，不改状态
+  if (printContext.mode === 'reprint' && !printContext.isTotal) {
     el.dlgPrint.close();
-    const label = printContext.isTotal
-      ? store.totalLabel(printContext.groupNo, printContext.groupTotal)
-      : printContext.groupLabel;
-    await doPrint(label);
+    await doPrint(printContext.groupLabel);
     renderAll();
     return;
   }
-  // finish 模式
+  // 其余两种情况都算「合计」并完成本单：
+  //   1) 本组结束 + 最后一组
+  //   2) 补打 + 最后一组
   if (printContext.isTotal) {
     const dirty = store.dirtyGroups();
     if (dirty.length > 0) {
