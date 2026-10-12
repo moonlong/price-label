@@ -1,4 +1,4 @@
-// CPCL 标签命令生成（40×30mm 热敏标签打印机，203dpi）。
+// CPCL 标签命令生成（50×50mm 热敏标签打印机，203dpi）。
 // 说明：这是「首选尝试」协议，不同厂家固件可能有差异，需真机打样调字体与编码。
 // 日文等非 ASCII 文本需打印机固件支持对应编码；ASCII（数字、英文名）通常可直接打印。
 
@@ -10,9 +10,9 @@ const DPI = 203;
  * @param {{widthMm:number,heightMm:number}} labelSize
  * @returns {string}
  */
-export function buildCpcl(label, labelSize = { widthMm: 40, heightMm: 30 }) {
-  const width = Math.round((labelSize.widthMm || 40) / 25.4 * DPI);
-  const height = Math.round((labelSize.heightMm || 30) / 25.4 * DPI);
+export function buildCpcl(label, labelSize = { widthMm: 50, heightMm: 50 }) {
+  const width = Math.round((labelSize.widthMm || 50) / 25.4 * DPI);
+  const height = Math.round((labelSize.heightMm || 50) / 25.4 * DPI);
 
   const out = [];
   // CPCL 头部：! <左边距0> <横向DPI> <纵向DPI> <标签高度dots> <张数1>

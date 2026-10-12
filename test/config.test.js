@@ -2,10 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createDefaultConfig, validateConfig } from '../core/config.js';
 
-test('默认配置：客户为空（干净版），标签 40×30', () => {
+test('默认配置：客户为空（干净版），标签 50×50', () => {
   const c = createDefaultConfig();
   assert.equal(c.customers.length, 0);
-  assert.deepEqual(c.label, { widthMm: 40, heightMm: 30 });
+  assert.deepEqual(c.label, { widthMm: 50, heightMm: 50 });
 });
 
 test('默认打印偏移与自定义偏移', () => {
@@ -22,10 +22,10 @@ test('合法配置校验通过', () => {
   assert.equal(res.config.label.widthMm, 50);
 });
 
-test('标签尺寸缺省回退默认 40×30', () => {
+test('标签尺寸缺省回退默认 50×50', () => {
   const res = validateConfig({ customers: [{ no: 1, name: 'A' }] });
   assert.equal(res.ok, true);
-  assert.deepEqual(res.config.label, { widthMm: 40, heightMm: 30 });
+  assert.deepEqual(res.config.label, { widthMm: 50, heightMm: 50 });
 });
 
 test('编号：老编号保留，缺失编号自动分配（仅新用户追加）', () => {

@@ -1,6 +1,6 @@
 // 配置：客户名单（编号 + 名字 + 星标）+ 标签尺寸 + 打印偏移。支持 JSON 导入/导出（整体替换）。
 
-export const DEFAULT_LABEL = Object.freeze({ widthMm: 40, heightMm: 30 });
+export const DEFAULT_LABEL = Object.freeze({ widthMm: 50, heightMm: 50 });
 // 打印微调：offsetXmm 负=左移、正=右移；offsetYmm 负=上移、正=下移（默认整体略左移 1.5mm）
 export const DEFAULT_PRINT = Object.freeze({ offsetXmm: -1.5, offsetYmm: 0 });
 

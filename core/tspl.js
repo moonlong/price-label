@@ -21,13 +21,13 @@ function textWidthDots(text, fontW, xMul) {
   return (ascii + full * 2) * fontW * xMul;
 }
 
-export function buildTspl(label, labelSize = { widthMm: 40, heightMm: 30 }) {
+export function buildTspl(label, labelSize = { widthMm: 50, heightMm: 50 }) {
   const dpi = 203;
-  const width = Math.round((labelSize.widthMm || 40) / 25.4 * dpi);
-  const height = Math.round((labelSize.heightMm || 30) / 25.4 * dpi);
+  const width = Math.round((labelSize.widthMm || 50) / 25.4 * dpi);
+  const height = Math.round((labelSize.heightMm || 50) / 25.4 * dpi);
 
   const out = [];
-  out.push(`SIZE ${labelSize.widthMm || 40} mm,${labelSize.heightMm || 30} mm`);
+  out.push(`SIZE ${labelSize.widthMm || 50} mm,${labelSize.heightMm || 50} mm`);
   out.push('GAP 0 mm,0 mm');
   out.push('CLS');
   out.push('DIRECTION 1');

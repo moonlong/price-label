@@ -3,7 +3,7 @@
 
 import { renderLabelBitmap, printToDots } from './raster.js';
 
-export function buildEscposRaster(label, labelSize = { widthMm: 40, heightMm: 30 }, print = {}) {
+export function buildEscposRaster(label, labelSize = { widthMm: 50, heightMm: 50 }, print = {}) {
   const bmp = renderLabelBitmap(label, labelSize, printToDots(print));
   const header = new Uint8Array([
     0x1b, 0x40,

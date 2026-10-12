@@ -100,9 +100,9 @@ export function computeLayout(mainTexts, W, H, opts, measure) {
  * 渲染便签到 1-bit 位图。
  * @returns {{width:number,height:number,widthBytes:number,data:Uint8Array,layout:object}}
  */
-export function renderLabelBitmap(label, labelSize = { widthMm: 40, heightMm: 30 }, opts = {}) {
-  const W = mmToDots(labelSize.widthMm || 40);
-  const H = mmToDots(labelSize.heightMm || 30);
+export function renderLabelBitmap(label, labelSize = { widthMm: 50, heightMm: 50 }, opts = {}) {
+  const W = mmToDots(labelSize.widthMm || 50);
+  const H = mmToDots(labelSize.heightMm || 50);
   const threshold = opts.threshold ?? 150;
   const ox = opts.offsetX ?? 0;
   const oy = opts.offsetY ?? 0;
