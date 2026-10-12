@@ -1,10 +1,10 @@
-import { Store } from './core/store.js';
-import { formatMoney, formatDate } from './core/label.js';
-import { buildCpcl } from './core/cpcl.js';
-import { buildTspl } from './core/tspl.js';
-import { buildEscposRaster } from './core/escpos.js';
-import { buildTsplRaster } from './core/tspl-raster.js';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js';
+import { Store } from './core/store.js?v=1.9.1';
+import { formatMoney, formatDate } from './core/label.js?v=1.9.1';
+import { buildCpcl } from './core/cpcl.js?v=1.9.1';
+import { buildTspl } from './core/tspl.js?v=1.9.1';
+import { buildEscposRaster } from './core/escpos.js?v=1.9.1';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.9.1';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.9.1';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
