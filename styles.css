@@ -29,32 +29,7 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  height: 100vh;
-  height: 100dvh;
-  overflow: hidden;
-}
-
-/* 三段布局：顶部固定 / 中部滚动 / 底部固定（计算器式，键盘不随记录移动） */
-.app-top {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex: none;
-}
-.app-scroll {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-.app-bottom {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex: none;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: 24px;
 }
 
 /* 客户搜索框 */
