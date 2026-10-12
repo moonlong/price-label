@@ -214,7 +214,7 @@ html, body {
 .keypad { display: flex; flex-direction: column; gap: 8px; }
 .key-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 
-/* 底部两行合并网格：计入跨两行（向下伸出），本组结束两倍宽 */
+/* 底部两行合并网格：计入跨两行（向下伸出） */
 .key-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -222,7 +222,6 @@ html, body {
   gap: 8px;
 }
 .key-grid .tall { grid-column: 4; grid-row: 1 / span 2; }
-.key-grid .wide { grid-column: 2 / span 2; grid-row: 2; }
 .key {
   padding: 18px 0;
   font-size: 22px;
