@@ -170,6 +170,7 @@ test('双录核对：不一致时提示差额并重录，直到最近两次一�
   const m1 = s.finishGroup();
   assert.equal(m1.action, 'mismatch');
   assert.equal(m1.diff, 100);
+  assert.deepEqual(m1.lastEntries.map((e) => e.value), [100, 200, 300, 500]); // 展示本次录入明细
 
   s.addEntry('1100');
   const done = s.finishGroup();
