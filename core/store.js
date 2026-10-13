@@ -16,7 +16,7 @@ export const MAX_GROUP = 9;
 export const MAX_ITEMS_NO_VERIFY = 3;
 
 function emptySession() {
-  return { customerNo: null, group: 1, groups: {} };
+  return { customerNo: null, group: 1, groups: {}, restoredTotal: null };
 }
 
 export class Store {
@@ -129,9 +129,11 @@ export class Store {
     const trimmed = String(name).trim();
     if (!trimmed) return { ok: false, error: '客户名不能为空' };
     if (this.config.customers.some((c) => c.name === trimmed)) return { ok: false, error: '客户已存在' };
-    this.config.customers.push({ no: this._nextCustomerNo(), name: trimmed, favorite: false });
+    const no = this._nextCustomerNo();
+    this.config.customers.push({ no, name: trimmed, favorite: false });
+    this.recents[no] = Date.now(); // 加入「最近使用」，便于快速找到
     this._persist();
-    return { ok: true };
+    return { ok: true, no, name: trimmed };
   }
 
   removeCustomer(no) {
@@ -448,6 +450,7 @@ export class Store {
       if (gn < minGroup) minGroup = gn;
     }
     this.session.group = minGroup <= MAX_GROUP ? minGroup : 1;
+    this.session.restoredTotal = Number(h.total) || 0;
     this._persist();
     return { ok: true, customerName: h.customer };
   }

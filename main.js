@@ -1,10 +1,10 @@
-import { Store } from './core/store.js?v=1.15.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.15.0';
-import { buildCpcl } from './core/cpcl.js?v=1.15.0';
-import { buildTspl } from './core/tspl.js?v=1.15.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.15.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.15.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.15.0';
+import { Store } from './core/store.js?v=1.16.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.16.0';
+import { buildCpcl } from './core/cpcl.js?v=1.16.0';
+import { buildTspl } from './core/tspl.js?v=1.16.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.16.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.16.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.16.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -32,6 +32,7 @@ const el = {
   contextBar: $('context-bar'),
   summary: $('summary'),
   grandTotal: $('grand-total'),
+  totalWarning: $('total-warning'),
   manage: $('manage'),
   history: $('history'),
   clear: $('clear'),
@@ -145,10 +146,7 @@ const printService = {
       return;
     }
     try {
-      this.device = await navigator.bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: SERVICE_CANDIDATES,
-      });
+      this.device = await this._getOrRequestDevice();
       this.server = await this.device.gatt.connect();
       this.connected = true;
       setConnect(true);
@@ -169,6 +167,26 @@ const printService = {
       setStatus(`连接失败：${e && e.message ? e.message : e}`);
       toast('连接失败或已取消');
     }
+  },
+
+  /** 先尝试重连最近授权的打印机（不弹框），失败则回退到弹框选择。 */
+  async _getOrRequestDevice() {
+    if (navigator.bluetooth.getDevices) {
+      try {
+        const devices = await navigator.bluetooth.getDevices();
+        for (const d of devices) {
+          if (d.gatt.connected) return d;
+          try {
+            await d.gatt.connect();
+            return d;
+          } catch (e) { /* 该设备不在范围，试下一个 */ }
+        }
+      } catch (e) { /* getDevices 不可用，忽略 */ }
+    }
+    return navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: SERVICE_CANDIDATES,
+    });
   },
 
   async discover() {
@@ -478,6 +496,8 @@ function renderSummary() {
 
 function renderGrandTotal() {
   el.grandTotal.textContent = `${formatMoney(store.grandTotal())}円`;
+  const restored = store.session.restoredTotal;
+  el.totalWarning.hidden = !(restored != null && store.grandTotal() !== restored);
 }
 
 function renderInput() {
@@ -801,6 +821,7 @@ el.addCustomer.addEventListener('click', () => {
     el.newCustomer.value = '';
     renderManageCustomerList();
     renderAll();
+    toast(`已添加「${r.name}」`);
   }
 });
 
@@ -819,6 +840,7 @@ el.importApply.addEventListener('click', () => {
   const r = store.importConfig(el.importText.value);
   if (!r.ok) return toast(r.error);
   el.importText.value = '';
+  expr = '';
   renderManageCustomerList();
   renderAll();
   toast('导入成功');
@@ -832,6 +854,7 @@ el.importFile.addEventListener('change', () => {
     const r = store.importConfig(String(reader.result));
     if (!r.ok) toast(r.error);
     else {
+      expr = '';
       renderManageCustomerList();
       renderAll();
       toast('导入成功');

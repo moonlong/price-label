@@ -79,6 +79,21 @@ test('仅结束：已打印后追加的组仍保持需重打', () => {
   assert.equal(s.groupStatus(1), 'dirty');
 });
 
+test('新增客户返回编号并加入最近使用；恢复时记录原合计', () => {
+  const s = fresh();
+  const r = s.addCustomer('新客');
+  assert.equal(r.ok, true);
+  assert.equal(r.name, '新客');
+  assert.ok(s.recents[r.no]);
+
+  s.addEntry('1000'); s.commitGroup(s.finishGroup().groupNo);
+  s.addEntry('2000'); const g2 = s.finishGroup();
+  s.finalizeTotal(g2.groupNo, g2.groupTotal);
+  const h = s.getHistory()[0];
+  s.restoreOrder(h.index);
+  assert.equal(s.session.restoredTotal, 3000);
+});
+
 test('取消打印不标记已打印：finishGroup 不改变状态', () => {
   const s = fresh();
   s.addEntry('1000');

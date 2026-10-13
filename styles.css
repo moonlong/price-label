@@ -276,7 +276,7 @@ html, body {
 .key.back { background: #fef2f2; color: var(--red); }
 .key.accumulate { background: var(--blue); color: #fff; border: none; font-size: 20px; }
 .key.undo { background: #fef9c3; color: #854d0e; border: none; font-size: 18px; }
-.key.finish { background: var(--green); color: #fff; border: none; font-size: 20px; font-weight: 700; }
+.key.finish { background: #dcfce7; color: #166534; border: 1px solid #86efac; font-size: 20px; font-weight: 700; }
 
 /* 双录核对区 */
 .verify-area {
@@ -314,6 +314,18 @@ html, body {
 }
 .grand-total-label { font-size: 14px; color: var(--muted); }
 .grand-total-value { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* 本单合计变更提醒 */
+.total-warning {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid #fdba74;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 13px;
+  font-weight: 600;
+}
 
 /* 打印预览里的最后一组开关 */
 .last-toggle {
