@@ -321,7 +321,6 @@ export class Store {
         return { ok: true, action: 'done', groupNo, groupTotal: subtotal, label: buildGroupLabel(this.customerName(), groupNo, subtotal) };
       }
       const diff = subtotal - prev;
-      const lastEntries = g.entries.map((e) => ({ expr: e.expr, value: e.value }));
       g.verifyBaseline = subtotal;
       g.entries = [];
       this._persist();
@@ -331,7 +330,6 @@ export class Store {
         subtotal,
         baseline: prev,
         diff,
-        lastEntries,
         message: `不一致\n上次：${prev}円\n本次：${subtotal}円\n差额：${diff >= 0 ? '+' : ''}${diff}円\n请再次录入核对`,
       };
     }

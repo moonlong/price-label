@@ -1,10 +1,10 @@
-import { Store } from './core/store.js?v=1.14.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.14.0';
-import { buildCpcl } from './core/cpcl.js?v=1.14.0';
-import { buildTspl } from './core/tspl.js?v=1.14.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.14.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.14.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.14.0';
+import { Store } from './core/store.js?v=1.15.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.15.0';
+import { buildCpcl } from './core/cpcl.js?v=1.15.0';
+import { buildTspl } from './core/tspl.js?v=1.15.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.15.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.15.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.15.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -29,7 +29,6 @@ const el = {
   verifyArea: $('verify-area'),
   verifyMsg: $('verify-msg'),
   verifyFill: $('verify-fill'),
-  verifyEntries: $('verify-entries'),
   contextBar: $('context-bar'),
   summary: $('summary'),
   grandTotal: $('grand-total'),
@@ -77,7 +76,6 @@ const el = {
 let expr = '';
 let toastTimer = null;
 let verifyNotice = null; // 核对区持久文案（"已记录…"/"不一致…"）
-let verifyEntries = []; // 不一致时展示的「本次录入明细」
 let printContext = null; // { mode, groupNo, groupTotal, groupLabel, isTotal }
 let customerSearch = ''; // 客户搜索词
 let picking = false; // 是否处于「展开搜索/重选」状态
@@ -428,18 +426,6 @@ function renderVerify() {
   el.verifyFill.style.width = pct + '%';
   el.verifyFill.className = verifyNotice && verifyNotice.includes('不一致') ? 'verify-fill bad' : 'verify-fill';
   el.verifyMsg.textContent = verifyNotice || '录入中';
-
-  // 不一致时展示「本次录入明细」
-  const showEntries = !!(verifyNotice && verifyNotice.includes('不一致') && verifyEntries.length > 0);
-  el.verifyEntries.hidden = !showEntries;
-  el.verifyEntries.innerHTML = '';
-  if (showEntries) {
-    for (const e of verifyEntries) {
-      const li = document.createElement('li');
-      li.textContent = `${e.expr} = ${formatMoney(e.value)}円`;
-      el.verifyEntries.appendChild(li);
-    }
-  }
 }
 
 function renderSummary() {
@@ -678,20 +664,17 @@ el.finish.addEventListener('click', () => {
   if (!r.ok) return toast(r.error);
   if (r.action === 'reenter') {
     verifyNotice = '已记录，请再次录入核对';
-    verifyEntries = [];
     renderAll();
     toast('已记录，请再次录入核对');
     return;
   }
   if (r.action === 'mismatch') {
     verifyNotice = r.message;
-    verifyEntries = r.lastEntries || [];
     renderAll();
     toast(r.message);
     return;
   }
   verifyNotice = null;
-  verifyEntries = [];
   renderAll();
   openFinishPrint(r, wasVerifying); // 核对通过则弹窗顶部显示「两次一致」横幅
 });
