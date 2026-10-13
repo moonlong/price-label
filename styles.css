@@ -197,6 +197,9 @@ html, body {
 .subtotal-value { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; }
 
 /* 输入框 */
+.input-card {
+  position: relative;
+}
 .input-card input {
   width: 100%;
   padding: 16px 14px;
@@ -209,19 +212,36 @@ html, body {
   background: var(--card);
   color: var(--text);
 }
+.input-card input.active {
+  border-color: var(--orange);
+}
+.input-card .caret {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 30px;
+  background: var(--orange);
+  animation: caret-blink 1s step-end infinite;
+}
+@keyframes caret-blink {
+  50% { opacity: 0; }
+}
 
 /* 键盘 */
 .keypad { display: flex; flex-direction: column; gap: 8px; }
 .key-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 
-/* 底部两行合并网格：计入跨两行（向下伸出） */
+/* 底部两行合并网格：计入标准大小(第4列第1行)、本组结束两倍宽 */
 .key-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   grid-template-rows: auto auto;
   gap: 8px;
 }
-.key-grid .tall { grid-column: 4; grid-row: 1 / span 2; }
+.key-grid .acc { grid-column: 4; grid-row: 1; }
+.key-grid .finish2x { grid-column: 3 / span 2; grid-row: 2; }
 .key {
   padding: 18px 0;
   font-size: 22px;

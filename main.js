@@ -1,10 +1,10 @@
-import { Store } from './core/store.js?v=1.9.1';
-import { formatMoney, formatDate } from './core/label.js?v=1.9.1';
-import { buildCpcl } from './core/cpcl.js?v=1.9.1';
-import { buildTspl } from './core/tspl.js?v=1.9.1';
-import { buildEscposRaster } from './core/escpos.js?v=1.9.1';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.9.1';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.9.1';
+import { Store } from './core/store.js?v=1.10.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.10.0';
+import { buildCpcl } from './core/cpcl.js?v=1.10.0';
+import { buildTspl } from './core/tspl.js?v=1.10.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.10.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.10.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.10.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -22,6 +22,7 @@ const el = {
   recordsHead: $('records-head'),
   subtotal: $('subtotal'),
   input: $('input'),
+  inputCaret: $('input-caret'),
   accumulate: $('accumulate'),
   undo: $('undo'),
   finish: $('finish'),
@@ -461,6 +462,8 @@ function renderGrandTotal() {
 
 function renderInput() {
   el.input.value = expr;
+  el.input.classList.toggle('active', expr !== '');
+  el.inputCaret.hidden = expr === '';
 }
 
 /** 读取扣除选择 → printContext.deduction，并刷新预览。 */
@@ -615,6 +618,7 @@ el.accumulate.addEventListener('click', () => {
 });
 
 el.undo.addEventListener('click', () => {
+  if (expr) return toast('请先计入或清空输入框');
   const res = store.undo();
   if (!res.ok) toast(res.error);
   else renderAll();
@@ -622,12 +626,7 @@ el.undo.addEventListener('click', () => {
 
 el.finish.addEventListener('click', () => {
   if (store.session.customerNo == null) return toast('请先选择客户');
-  if (expr) {
-    const a = store.addEntry(expr);
-    if (!a.ok) return toast(a.error);
-    expr = '';
-    renderAll();
-  }
+  if (expr) return toast('请先计入或清空输入框');
   const wasVerifying = store.currentVerification().active;
   const r = store.finishGroup();
   if (!r.ok) return toast(r.error);
@@ -746,6 +745,7 @@ function renderManageCustomerList() {
 }
 
 el.manage.addEventListener('click', () => {
+  if (store.hasSettledGroup()) return toast('完成本客户结算，或清空本客户，才能操作');
   renderManageCustomerList();
   el.importText.value = '';
   el.dlgManage.showModal();
@@ -872,6 +872,7 @@ function downloadText(filename, text) {
 }
 
 el.history.addEventListener('click', () => {
+  if (store.hasSettledGroup()) return toast('完成本客户结算，或清空本客户，才能操作');
   renderHistory();
   el.dlgHistory.showModal();
 });
