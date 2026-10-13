@@ -467,6 +467,28 @@ html, body {
   border-radius: 6px;
 }
 
+/* 打印弹窗里的本组记录（≤3 条免复核时展示） */
+.print-records {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8fafc;
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+}
+.print-records-head {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.print-records li {
+  padding: 3px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.print-records li:last-child { border-bottom: none; }
+
 /* 核对一致横幅 */
 .print-verified {
   margin-bottom: 12px;

@@ -46,14 +46,17 @@ test('0 与 00 不能计入（金额不能为 0）', () => {
   assert.equal(s.currentSubtotal(), 550);
 });
 
-test('追加已打印组超过3条也需复核（甲：按总条数）', () => {
+test('追加已打印组只看追加条数：追加≤3不复核，追加≥4才复核', () => {
   const s = fresh();
   s.setGroup(1); s.addEntry('100'); s.addEntry('200');
-  s.commitGroup(s.finishGroup().groupNo); // 打印，1枚目 done（2条）
-  s.setGroup(1); s.addEntry('300'); s.addEntry('400'); // 追加2条 → 共4条 dirty
+  s.commitGroup(s.finishGroup().groupNo); // 打印，1枚目 done（2条，committedCount=2）
+
+  s.setGroup(1); s.addEntry('300'); s.addEntry('400'); // 追加2条
   assert.equal(s.groupStatus(1), 'dirty');
-  const r = s.finishGroup();
-  assert.equal(r.action, 'reenter'); // 超过3条 → 复核
+  assert.equal(s.finishGroup().action, 'done'); // 追加2条 → 不复核
+
+  s.addEntry('500'); s.addEntry('600'); // 再追加2条，共追加4条
+  assert.equal(s.finishGroup().action, 'reenter'); // 追加4条 → 复核
 });
 
 test('仅结束不打印：pending 状态、计入汇总与锁定，补打后变 done', () => {

@@ -172,7 +172,7 @@ export class Store {
 
   _group(n) { return this.session.groups[n] ?? null; }
   _ensureGroup(n) {
-    if (!this.session.groups[n]) this.session.groups[n] = { entries: [], status: 'in-progress', verifyBaseline: null };
+    if (!this.session.groups[n]) this.session.groups[n] = { entries: [], status: 'in-progress', verifyBaseline: null, committedCount: 0 };
     return this.session.groups[n];
   }
   _subtotal(group) { return group.entries.reduce((s, e) => s + e.value, 0); }
@@ -314,6 +314,7 @@ export class Store {
     if (g.entries.length === 0) return { ok: false, error: '本组没有金额，无法结束' };
     const subtotal = this._subtotal(g);
     const groupNo = this.session.group;
+    const appended = g.entries.length - (g.committedCount || 0); // 只看「本次追加」的条数
 
     if (g.verifyBaseline != null) {
       const prev = g.verifyBaseline;
@@ -336,7 +337,7 @@ export class Store {
       };
     }
 
-    if (g.entries.length > MAX_ITEMS_NO_VERIFY) {
+    if (appended > MAX_ITEMS_NO_VERIFY) {
       g.verifyBaseline = subtotal;
       g.entries = [];
       this._persist();
@@ -352,6 +353,7 @@ export class Store {
     if (!g || g.entries.length === 0) return { ok: false, error: '该枚目没有金额' };
     g.status = 'done';
     g.verifyBaseline = null;
+    g.committedCount = g.entries.length;
     if (this.session.group === groupNo && this.session.group < MAX_GROUP) this.session.group += 1;
     this._persist();
     return { ok: true };
@@ -363,6 +365,7 @@ export class Store {
     if (!g || g.entries.length === 0) return { ok: false, error: '该枚目没有金额' };
     if (g.status === 'in-progress') g.status = 'pending';
     g.verifyBaseline = null;
+    g.committedCount = g.entries.length;
     if (this.session.group === groupNo && this.session.group < MAX_GROUP) this.session.group += 1;
     this._persist();
     return { ok: true };
@@ -446,6 +449,7 @@ export class Store {
         entries: [{ expr: String(st), value: st }],
         status: 'done',
         verifyBaseline: null,
+        committedCount: 1,
       };
       if (gn < minGroup) minGroup = gn;
     }

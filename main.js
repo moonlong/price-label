@@ -1,10 +1,10 @@
-import { Store } from './core/store.js?v=1.17.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.17.0';
-import { buildCpcl } from './core/cpcl.js?v=1.17.0';
-import { buildTspl } from './core/tspl.js?v=1.17.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.17.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.17.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.17.0';
+import { Store } from './core/store.js?v=1.18.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.18.0';
+import { buildCpcl } from './core/cpcl.js?v=1.18.0';
+import { buildTspl } from './core/tspl.js?v=1.18.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.18.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.18.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.18.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -38,6 +38,7 @@ const el = {
   clear: $('clear'),
   dlgPrint: $('dlg-print'),
   printPreview: $('print-preview'),
+  printRecords: $('print-records'),
   printVerified: $('print-verified'),
   printVerifiedAmount: $('print-verified-amount'),
   printWarning: $('print-warning'),
@@ -592,6 +593,23 @@ async function onPrintOk() {
   renderAll();
 }
 
+function renderPrintRecords(verified) {
+  el.printRecords.innerHTML = '';
+  const entries = verified ? [] : store.currentEntries();
+  const show = entries.length > 0 && entries.length <= 3;
+  el.printRecords.hidden = !show;
+  if (!show) return;
+  const head = document.createElement('div');
+  head.className = 'print-records-head';
+  head.textContent = '本组记录';
+  el.printRecords.appendChild(head);
+  for (const e of entries) {
+    const li = document.createElement('li');
+    li.textContent = `${e.expr} = ${formatMoney(e.value)}円`;
+    el.printRecords.appendChild(li);
+  }
+}
+
 function openFinishPrint(r, verified = false) {
   printContext = { mode: 'finish', groupNo: r.groupNo, groupTotal: r.groupTotal, groupLabel: r.label, isTotal: false, deduction: null };
   el.lastGroupToggle.checked = false;
@@ -603,6 +621,7 @@ function openFinishPrint(r, verified = false) {
   } else {
     el.printVerified.hidden = true;
   }
+  renderPrintRecords(verified);
   renderPrintPreview();
   el.printOk.onclick = onPrintOk;
   el.printSkip.onclick = onPrintSkip;
@@ -618,6 +637,7 @@ function openReprintPrint(r, showToggle = false) {
   resetDeductionUI();
   el.printVerified.hidden = true;
   el.printSkip.style.display = 'none';
+  el.printRecords.hidden = true;
   renderPrintPreview();
   el.printOk.onclick = onPrintOk;
   el.printCancel.onclick = () => el.dlgPrint.close();
