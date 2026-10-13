@@ -1,10 +1,10 @@
-import { Store } from './core/store.js?v=1.13.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.13.0';
-import { buildCpcl } from './core/cpcl.js?v=1.13.0';
-import { buildTspl } from './core/tspl.js?v=1.13.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.13.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.13.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.13.0';
+import { Store } from './core/store.js?v=1.14.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.14.0';
+import { buildCpcl } from './core/cpcl.js?v=1.14.0';
+import { buildTspl } from './core/tspl.js?v=1.14.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.14.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.14.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.14.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -261,7 +261,7 @@ function setStatus(text) {
 function renderContext() {
   const name = store.customerName();
   const group = store.currentGroup();
-  el.contextBar.textContent = name ? `👤 ${name} · ${group}枚目` : '👤 未选择客户';
+  el.contextBar.textContent = name ? `🧾 ${name} · ${group}枚目` : '🧾 未选择客户';
 }
 
 function renderAll() {
