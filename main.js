@@ -1,10 +1,10 @@
-import { Store } from './core/store.js?v=1.11.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.11.0';
-import { buildCpcl } from './core/cpcl.js?v=1.11.0';
-import { buildTspl } from './core/tspl.js?v=1.11.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.11.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.11.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.11.0';
+import { Store } from './core/store.js?v=1.12.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.12.0';
+import { buildCpcl } from './core/cpcl.js?v=1.12.0';
+import { buildTspl } from './core/tspl.js?v=1.12.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.12.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.12.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.12.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -45,6 +45,7 @@ const el = {
   deductAmount: $('deduct-amount'),
   printOk: $('print-ok'),
   printCancel: $('print-cancel'),
+  printSkip: $('print-skip'),
   dlgClear: $('dlg-clear'),
   clearAll: $('clear-all'),
   clearGroup: $('clear-group'),
@@ -443,18 +444,25 @@ function renderSummary() {
     if (s.status === 'done') {
       badge.className = 'badge ok';
       badge.textContent = '已打印';
-      li.append(badge);
+    } else if (s.status === 'pending') {
+      li.classList.add('dirty-row');
+      badge.className = 'badge warn';
+      badge.textContent = '需打印';
+    } else if (s.status === 'dirty') {
+      li.classList.add('dirty-row');
+      badge.className = 'badge warn';
+      badge.textContent = '需重打';
+    }
+    li.append(badge);
+
+    // 已打印 / 需打印 的组可以「补打」
+    if (s.status === 'done' || s.status === 'pending') {
       const re = document.createElement('button');
       re.className = 'reprint';
       re.textContent = '补打';
       re.type = 'button';
       re.onclick = () => reprintGroup(s.group);
       li.append(re);
-    } else if (s.status === 'dirty') {
-      li.classList.add('dirty-row');
-      badge.className = 'badge warn';
-      badge.textContent = '需重打';
-      li.append(badge);
     }
     el.summary.appendChild(li);
   }
@@ -511,10 +519,11 @@ function renderPrintPreview() {
 }
 
 async function onPrintOk() {
-  // 补打「本组」：只打印，不改状态
+  // 补打「本组」：只打印；若该组原为「需打印」，补打后标记为已打印
   if (printContext.mode === 'reprint' && !printContext.isTotal) {
     el.dlgPrint.close();
     await doPrint(printContext.groupLabel);
+    if (printContext.wasPending) store.markPrinted(printContext.groupNo);
     renderAll();
     return;
   }
@@ -522,9 +531,9 @@ async function onPrintOk() {
   //   1) 本组结束 + 最后一组
   //   2) 补打 + 最后一组
   if (printContext.isTotal) {
-    const dirty = store.dirtyGroups();
-    if (dirty.length > 0) {
-      const ok = await confirmDialog(`${dirty.join('、')}枚目 已修改未重打，是否继续合计？`);
+    const unprinted = store.unprintedGroups();
+    if (unprinted.length > 0) {
+      const ok = await confirmDialog(`${unprinted.join('、')}枚目 需打印/需重打，是否继续合计？`);
       if (!ok) return;
     }
   }
@@ -558,20 +567,30 @@ function openFinishPrint(r, verified = false) {
   }
   renderPrintPreview();
   el.printOk.onclick = onPrintOk;
+  el.printSkip.onclick = onPrintSkip;
+  el.printSkip.style.display = '';
   el.printCancel.onclick = () => el.dlgPrint.close();
   el.dlgPrint.showModal();
 }
 
 function openReprintPrint(r, showToggle = false) {
-  printContext = { mode: 'reprint', groupNo: r.groupNo, groupTotal: r.groupTotal, groupLabel: r.label, isTotal: false, deduction: null };
+  printContext = { mode: 'reprint', groupNo: r.groupNo, groupTotal: r.groupTotal, groupLabel: r.label, isTotal: false, deduction: null, wasPending: r.wasPending };
   el.lastGroupToggle.checked = false;
   el.lastGroupToggle.closest('.last-toggle').style.display = showToggle ? '' : 'none';
   resetDeductionUI();
   el.printVerified.hidden = true;
+  el.printSkip.style.display = 'none';
   renderPrintPreview();
   el.printOk.onclick = onPrintOk;
   el.printCancel.onclick = () => el.dlgPrint.close();
   el.dlgPrint.showModal();
+}
+
+function onPrintSkip() {
+  el.dlgPrint.close();
+  store.commitGroupWithoutPrint(printContext.groupNo);
+  renderAll();
+  toast(`${printContext.groupNo}枚目 已结束（需打印）`, 3500);
 }
 
 async function doPrint(label) {

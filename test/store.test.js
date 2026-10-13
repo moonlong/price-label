@@ -46,6 +46,39 @@ test('0 与 00 不能计入（金额不能为 0）', () => {
   assert.equal(s.currentSubtotal(), 550);
 });
 
+test('追加已打印组超过3条也需复核（甲：按总条数）', () => {
+  const s = fresh();
+  s.setGroup(1); s.addEntry('100'); s.addEntry('200');
+  s.commitGroup(s.finishGroup().groupNo); // 打印，1枚目 done（2条）
+  s.setGroup(1); s.addEntry('300'); s.addEntry('400'); // 追加2条 → 共4条 dirty
+  assert.equal(s.groupStatus(1), 'dirty');
+  const r = s.finishGroup();
+  assert.equal(r.action, 'reenter'); // 超过3条 → 复核
+});
+
+test('仅结束不打印：pending 状态、计入汇总与锁定，补打后变 done', () => {
+  const s = fresh();
+  s.addEntry('1000');
+  const g = s.finishGroup();
+  assert.equal(s.commitGroupWithoutPrint(g.groupNo).ok, true);
+  assert.equal(s.groupStatus(1), 'pending');
+  assert.equal(s.hasSettledGroup(), true);
+  assert.equal(s.grandTotal(), 1000);
+  assert.deepEqual(s.summary().map((x) => x.status), ['pending']);
+  const r = s.reprintGroup(1);
+  assert.equal(r.wasPending, true);
+  s.markPrinted(1);
+  assert.equal(s.groupStatus(1), 'done');
+});
+
+test('仅结束：已打印后追加的组仍保持需重打', () => {
+  const s = fresh();
+  s.setGroup(1); s.addEntry('100'); s.commitGroup(s.finishGroup().groupNo); // done
+  s.setGroup(1); s.addEntry('200'); // dirty
+  s.commitGroupWithoutPrint(1);
+  assert.equal(s.groupStatus(1), 'dirty');
+});
+
 test('取消打印不标记已打印：finishGroup 不改变状态', () => {
   const s = fresh();
   s.addEntry('1000');

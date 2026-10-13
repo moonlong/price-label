@@ -183,11 +183,11 @@ export class Store {
     return false;
   }
 
-  /** 是否已完成过至少一组结算（= 存在「已打印」或「需重打」的组）→ 用于锁定客户。 */
+  /** 是否已完成过至少一组结算（= 存在「已打印」「需重打」「需打印」的组）→ 用于锁定客户。 */
   hasSettledGroup() {
     for (let n = 1; n <= MAX_GROUP; n++) {
       const g = this._group(n);
-      if (g && (g.status === 'done' || g.status === 'dirty')) return true;
+      if (g && (g.status === 'done' || g.status === 'dirty' || g.status === 'pending')) return true;
     }
     return false;
   }
@@ -227,6 +227,7 @@ export class Store {
     const entry = { expr: String(expr).trim(), value: ev.value };
     g.entries.push(entry);
     if (g.status === 'done') g.status = 'dirty'; // 已打印的枚目追加金额 → 需重打
+    else if (g.status === 'pending') g.status = 'in-progress'; // 需打印的枚目追加 → 回到编辑中
     const subtotal = this._subtotal(g);
     this._persist();
     return { ok: true, entry, subtotal };
@@ -256,28 +257,26 @@ export class Store {
     return { active: true, baseline: g.verifyBaseline };
   }
 
-  /** 汇总：仅显示已打印 / 需重打 的组（不显示正在计算/核对中的组）。 */
+  /** 汇总：显示 已打印 / 需重打 / 需打印 的组（不显示正在计算/核对中的组）。 */
   summary() {
     const out = [];
     for (let n = 1; n <= MAX_GROUP; n++) {
       const g = this._group(n);
       if (!g) continue;
-      if (g.status === 'done') {
-        out.push({ group: n, subtotal: this._subtotal(g), status: 'done', count: g.entries.length });
-      } else if (g.status === 'dirty') {
-        out.push({ group: n, subtotal: this._subtotal(g), status: 'dirty', count: g.entries.length });
+      if (g.status === 'done' || g.status === 'dirty' || g.status === 'pending') {
+        out.push({ group: n, subtotal: this._subtotal(g), status: g.status, count: g.entries.length });
       }
     }
     return out;
   }
 
-  /** 本单合计 = 已打印 + 需重打 的组之和（不含正在计算/核对中的组）。 */
+  /** 本单合计 = 已打印 + 需重打 + 需打印 的组之和（不含正在计算/核对中的组）。 */
   grandTotal() {
     let sum = 0;
     for (let n = 1; n <= MAX_GROUP; n++) {
       const g = this._group(n);
       if (!g) continue;
-      if (g.status === 'done' || g.status === 'dirty') sum += this._subtotal(g);
+      if (g.status === 'done' || g.status === 'dirty' || g.status === 'pending') sum += this._subtotal(g);
     }
     return sum;
   }
@@ -287,6 +286,16 @@ export class Store {
     for (let n = 1; n <= MAX_GROUP; n++) {
       const g = this._group(n);
       if (g && g.status === 'dirty') out.push(n);
+    }
+    return out;
+  }
+
+  /** 需打印 / 需重打 的组（合计前需要提醒）。 */
+  unprintedGroups() {
+    const out = [];
+    for (let n = 1; n <= MAX_GROUP; n++) {
+      const g = this._group(n);
+      if (g && (g.status === 'dirty' || g.status === 'pending')) out.push(n);
     }
     return out;
   }
@@ -303,10 +312,6 @@ export class Store {
     if (g.entries.length === 0) return { ok: false, error: '本组没有金额，无法结束' };
     const subtotal = this._subtotal(g);
     const groupNo = this.session.group;
-
-    if (g.status === 'dirty') {
-      return { ok: true, action: 'done', groupNo, groupTotal: subtotal, label: buildGroupLabel(this.customerName(), groupNo, subtotal) };
-    }
 
     if (g.verifyBaseline != null) {
       const prev = g.verifyBaseline;
@@ -350,10 +355,30 @@ export class Store {
     return { ok: true };
   }
 
+  /** 仅结束不打印：标记为「需打印」（若已打印过追加则保持「需重打」），并推进到下一枚目。 */
+  commitGroupWithoutPrint(groupNo) {
+    const g = this._group(groupNo);
+    if (!g || g.entries.length === 0) return { ok: false, error: '该枚目没有金额' };
+    if (g.status === 'in-progress') g.status = 'pending';
+    g.verifyBaseline = null;
+    if (this.session.group === groupNo && this.session.group < MAX_GROUP) this.session.group += 1;
+    this._persist();
+    return { ok: true };
+  }
+
+  /** 补打后标记为已打印。 */
+  markPrinted(groupNo) {
+    const g = this._group(groupNo);
+    if (!g) return { ok: false, error: '该枚目不存在' };
+    g.status = 'done';
+    this._persist();
+    return { ok: true };
+  }
+
   /** 合计预览标签（不改变状态）：本组 + 总额（含当前组）。deduction 可选。 */
   totalLabel(groupNo, groupTotal, deduction = null) {
     const g = this._group(groupNo);
-    const counted = g && (g.status === 'done' || g.status === 'dirty');
+    const counted = g && (g.status === 'done' || g.status === 'dirty' || g.status === 'pending');
     const total = this.grandTotal() + (counted ? 0 : groupTotal);
     const groupCount = this.summary().length + (counted ? 0 : 1);
     return buildTotalLabel(this.customerName(), groupNo, groupTotal, total, formatDate(), { singleGroup: groupCount === 1, deduction });
@@ -470,16 +495,16 @@ export class Store {
 
   reprintGroup(n) {
     const g = this._group(n);
-    if (!g || g.status !== 'done') return { ok: false, error: '该枚目没有可补打的内容' };
-    return { ok: true, groupNo: n, groupTotal: this._subtotal(g), label: buildGroupLabel(this.customerName(), n, this._subtotal(g)) };
+    if (!g || (g.status !== 'done' && g.status !== 'pending')) return { ok: false, error: '该枚目没有可补打的内容' };
+    return { ok: true, groupNo: n, groupTotal: this._subtotal(g), label: buildGroupLabel(this.customerName(), n, this._subtotal(g)), wasPending: g.status === 'pending' };
   }
 
-  /** 该枚目是否为「最后一组」（已打印/需重打中的最大编号）。 */
+  /** 该枚目是否为「最后一组」（已打印/需重打/需打印中的最大编号）。 */
   isLastSettledGroup(n) {
     let max = 0;
     for (let m = 1; m <= MAX_GROUP; m++) {
       const g = this._group(m);
-      if (g && (g.status === 'done' || g.status === 'dirty')) max = m;
+      if (g && (g.status === 'done' || g.status === 'dirty' || g.status === 'pending')) max = m;
     }
     return max === n;
   }
