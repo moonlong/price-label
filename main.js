@@ -1,10 +1,10 @@
-import { Store } from './core/store.js?v=1.16.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.16.0';
-import { buildCpcl } from './core/cpcl.js?v=1.16.0';
-import { buildTspl } from './core/tspl.js?v=1.16.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.16.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.16.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.16.0';
+import { Store } from './core/store.js?v=1.17.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.17.0';
+import { buildCpcl } from './core/cpcl.js?v=1.17.0';
+import { buildTspl } from './core/tspl.js?v=1.17.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.17.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.17.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.17.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -83,9 +83,13 @@ let picking = false; // 是否处于「展开搜索/重选」状态
 
 function toast(msg, duration = 2200) {
   el.toast.textContent = msg;
+  if (!el.toast.open) el.toast.show();
   el.toast.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.toast.classList.remove('show'), duration);
+  toastTimer = setTimeout(() => {
+    el.toast.classList.remove('show');
+    setTimeout(() => { if (el.toast.open) el.toast.close(); }, 250);
+  }, duration);
 }
 
 // ---------- 打印服务（真实 BLE 连接 + TSPL 位图写入 + 诊断） ----------
@@ -146,7 +150,17 @@ const printService = {
       return;
     }
     try {
-      this.device = await this._getOrRequestDevice();
+      setStatus('正在尝试重连最近打印机…');
+      const device = await this._findRecentDevice();
+      if (!device) {
+        setStatus('未找到可重连设备，请选择打印机');
+        this.device = await navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: SERVICE_CANDIDATES,
+        });
+      } else {
+        this.device = device;
+      }
       this.server = await this.device.gatt.connect();
       this.connected = true;
       setConnect(true);
@@ -169,24 +183,20 @@ const printService = {
     }
   },
 
-  /** 先尝试重连最近授权的打印机（不弹框），失败则回退到弹框选择。 */
-  async _getOrRequestDevice() {
-    if (navigator.bluetooth.getDevices) {
-      try {
-        const devices = await navigator.bluetooth.getDevices();
-        for (const d of devices) {
-          if (d.gatt.connected) return d;
-          try {
-            await d.gatt.connect();
-            return d;
-          } catch (e) { /* 该设备不在范围，试下一个 */ }
-        }
-      } catch (e) { /* getDevices 不可用，忽略 */ }
-    }
-    return navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
-      optionalServices: SERVICE_CANDIDATES,
-    });
+  /** 从最近授权的设备中找一台能连上的打印机；找不到返回 null。 */
+  async _findRecentDevice() {
+    if (!navigator.bluetooth.getDevices) return null;
+    try {
+      const devices = await navigator.bluetooth.getDevices();
+      for (const d of devices) {
+        if (d.gatt.connected) return d;
+        try {
+          await d.gatt.connect();
+          return d;
+        } catch (e) { /* 该设备不在范围，试下一个 */ }
+      }
+    } catch (e) { /* getDevices 不可用，忽略 */ }
+    return null;
   },
 
   async discover() {

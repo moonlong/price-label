@@ -543,8 +543,11 @@ hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
 /* 提示 */
 .toast {
   position: fixed;
+  inset: auto;
   left: 50%;
   bottom: 24px;
+  margin: 0;
+  border: none;
   transform: translateX(-50%) translateY(20px);
   background: var(--text);
   color: #fff;
@@ -555,6 +558,5 @@ hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
   pointer-events: none;
   transition: opacity 0.2s, transform 0.2s;
   max-width: 90vw;
-  z-index: 50;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
