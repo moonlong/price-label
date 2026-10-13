@@ -182,6 +182,10 @@ html, body {
 }
 .records li .expr { color: var(--text); }
 .records li .val { color: var(--muted); }
+.records li.latest {
+  background: #dbeafe;
+  border-radius: 6px;
+}
 .records .empty { color: var(--muted); justify-content: center; }
 
 .subtotal {

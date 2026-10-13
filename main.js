@@ -1,10 +1,10 @@
-import { Store } from './core/store.js?v=1.10.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.10.0';
-import { buildCpcl } from './core/cpcl.js?v=1.10.0';
-import { buildTspl } from './core/tspl.js?v=1.10.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.10.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.10.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.10.0';
+import { Store } from './core/store.js?v=1.11.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.11.0';
+import { buildCpcl } from './core/cpcl.js?v=1.11.0';
+import { buildTspl } from './core/tspl.js?v=1.11.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.11.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.11.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.11.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -332,6 +332,7 @@ function renderCustomerPick() {
       picking = false;
       customerSearch = '';
       el.customerSearch.value = '';
+      expr = '';
       renderAll();
     });
 
@@ -392,6 +393,9 @@ function renderRecords() {
     li.append(s1, s2);
     el.records.appendChild(li);
   }
+  // 最新一条计入用淡蓝高亮
+  const last = el.records.lastElementChild;
+  if (last) last.classList.add('latest');
   // 自动滚到底部，始终显示最近几条（列表内部滚动，不推动键盘）
   el.records.scrollTop = el.records.scrollHeight;
 }
@@ -462,8 +466,9 @@ function renderGrandTotal() {
 
 function renderInput() {
   el.input.value = expr;
-  el.input.classList.toggle('active', expr !== '');
-  el.inputCaret.hidden = expr === '';
+  const active = store.session.customerNo != null;
+  el.input.classList.toggle('active', active);
+  el.inputCaret.hidden = !active;
 }
 
 /** 读取扣除选择 → printContext.deduction，并刷新预览。 */
@@ -712,11 +717,13 @@ el.clear.addEventListener('click', () => el.dlgClear.showModal());
 el.clearGroup.addEventListener('click', () => {
   const r = store.clearCurrentGroup();
   if (!r.ok) toast(r.error);
+  expr = '';
   el.dlgClear.close();
   renderAll();
 });
 el.clearAll.addEventListener('click', () => {
   store.clearAll();
+  expr = '';
   el.dlgClear.close();
   renderAll();
   toast('已清空当前客户全部枚目');
