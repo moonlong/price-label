@@ -1,10 +1,10 @@
-import { Store } from './core/store.js?v=1.19.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.19.0';
-import { buildCpcl } from './core/cpcl.js?v=1.19.0';
-import { buildTspl } from './core/tspl.js?v=1.19.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.19.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.19.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.19.0';
+import { Store } from './core/store.js?v=1.20.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.20.0';
+import { buildCpcl } from './core/cpcl.js?v=1.20.0';
+import { buildTspl } from './core/tspl.js?v=1.20.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.20.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.20.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.20.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -23,6 +23,7 @@ const el = {
   subtotal: $('subtotal'),
   input: $('input'),
   inputCaret: $('input-caret'),
+  keypad: $('keypad'),
   accumulate: $('accumulate'),
   undo: $('undo'),
   finish: $('finish'),
@@ -285,6 +286,10 @@ function setStatus(text) {
 }
 
 // ---------- 渲染 ----------
+function scrollToKeypad() {
+  if (el.keypad && el.keypad.scrollIntoView) el.keypad.scrollIntoView({ block: 'end', behavior: 'smooth' });
+}
+
 function renderContext() {
   const name = store.customerName();
   const group = store.currentGroup();
@@ -372,6 +377,7 @@ function renderCustomerPick() {
       el.customerSearch.value = '';
       expr = '';
       renderAll();
+      scrollToKeypad();
     });
 
     el.customerList.appendChild(li);
@@ -412,6 +418,7 @@ function renderGroup() {
 function renderRecords() {
   el.recordsHead.textContent = `当前正在编辑：${store.currentGroup()}枚目`;
   const entries = store.currentEntries();
+  const groupNo = store.currentGroup();
   el.records.innerHTML = '';
   if (entries.length === 0) {
     const li = document.createElement('li');
@@ -420,17 +427,30 @@ function renderRecords() {
     el.records.appendChild(li);
     return;
   }
-  for (const e of entries) {
+  entries.forEach((e, i) => {
     const li = document.createElement('li');
+    const num = document.createElement('span');
+    num.className = 'num';
+    num.textContent = String(i + 1);
     const s1 = document.createElement('span');
     s1.className = 'expr';
     s1.textContent = e.expr;
     const s2 = document.createElement('span');
     s2.className = 'val';
     s2.textContent = `= ${formatMoney(e.value)}`;
-    li.append(s1, s2);
+    const del = document.createElement('button');
+    del.className = 'del';
+    del.type = 'button';
+    del.title = '删除此条';
+    del.textContent = '×';
+    del.onclick = () => {
+      const r = store.removeEntry(groupNo, i);
+      if (!r.ok) return toast(r.error);
+      renderAll();
+    };
+    li.append(num, s1, s2, del);
     el.records.appendChild(li);
-  }
+  });
   // 最新一条计入用淡蓝高亮
   const last = el.records.lastElementChild;
   if (last) last.classList.add('latest');
@@ -786,6 +806,7 @@ el.group.addEventListener('change', () => {
   const r = store.setGroup(Number(el.group.value));
   if (!r.ok) toast(r.error);
   renderAll();
+  scrollToKeypad();
 });
 
 el.connect.addEventListener('click', () => printService.connect());

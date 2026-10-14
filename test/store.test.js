@@ -97,6 +97,33 @@ test('新增客户返回编号并加入最近使用；恢复时记录原合计',
   assert.equal(s.session.restoredTotal, 3000);
 });
 
+test('删除指定条目：删中间条目；已打印组删后变需重打；需打印组删后回编辑', () => {
+  const s = fresh();
+  // 1) in-progress：删中间一条，状态不变
+  s.addEntry('100'); s.addEntry('200'); s.addEntry('300');
+  assert.equal(s.removeEntry(1, 1).ok, true); // 删第2条 200
+  assert.deepEqual(s.currentEntries().map((e) => e.value), [100, 300]);
+  assert.equal(s.currentSubtotal(), 400);
+  assert.equal(s.groupStatus(1), 'in-progress');
+
+  // 2) 已打印组删条目 → 需重打
+  s.commitGroup(s.finishGroup().groupNo); // done（100+300=400）
+  assert.equal(s.groupStatus(1), 'done');
+  s.setGroup(1);
+  assert.equal(s.removeEntry(1, 0).ok, true); // 删第1条 100
+  assert.equal(s.groupStatus(1), 'dirty');
+  assert.equal(s.currentSubtotal(), 300);
+
+  // 3) 需打印组删条目 → 回到编辑中
+  const s2 = fresh();
+  s2.addEntry('500');
+  s2.commitGroupWithoutPrint(s2.finishGroup().groupNo); // pending
+  assert.equal(s2.groupStatus(1), 'pending');
+  s2.setGroup(1);
+  assert.equal(s2.removeEntry(1, 0).ok, true);
+  assert.equal(s2.groupStatus(1), 'in-progress');
+});
+
 test('取消打印不标记已打印：finishGroup 不改变状态', () => {
   const s = fresh();
   s.addEntry('1000');

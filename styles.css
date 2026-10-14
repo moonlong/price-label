@@ -195,8 +195,21 @@ html, body {
   border-bottom: 1px dashed var(--line);
   font-size: 16px;
 }
-.records li .expr { color: var(--text); }
-.records li .val { color: var(--muted); }
+.records li .num { color: var(--muted); font-size: 12px; min-width: 18px; align-self: center; flex: none; }
+.records li .expr { color: var(--text); flex: 1; }
+.records li .val { color: var(--muted); flex: none; }
+.records li .del {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 20px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  flex: none;
+}
+.records li .del:active { color: #dc2626; background: #fee2e2; }
 .records li.latest {
   background: #dbeafe;
   border-radius: 6px;

@@ -245,6 +245,20 @@ export class Store {
     return { ok: true, removed, subtotal };
   }
 
+  /** 删除某枚目里的第 index 条记录（0 起）。已打印的组被改动 → 标「需重打」。 */
+  removeEntry(groupNo, index) {
+    const g = this._group(groupNo);
+    if (!g || !Array.isArray(g.entries)) return { ok: false, error: '该枚目不存在' };
+    if (!Number.isInteger(index) || index < 0 || index >= g.entries.length) return { ok: false, error: '该条记录不存在' };
+    g.entries.splice(index, 1);
+    if (g.status === 'done') g.status = 'dirty'; // 已打印的组删条目 → 需重打
+    else if (g.status === 'pending') g.status = 'in-progress'; // 需打印的组删条目 → 回到编辑中
+    g.committedCount = Math.min(g.committedCount || 0, g.entries.length);
+    const subtotal = this._subtotal(g);
+    this._persist();
+    return { ok: true, subtotal };
+  }
+
   currentEntries() {
     const g = this._group(this.session.group);
     return g ? g.entries.slice() : [];
