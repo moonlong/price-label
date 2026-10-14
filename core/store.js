@@ -64,6 +64,7 @@ export class Store {
             customerNo: Number.isInteger(parsed.customerNo) ? parsed.customerNo : null,
             group: Number.isInteger(parsed.group) && parsed.group >= 1 && parsed.group <= MAX_GROUP ? parsed.group : 1,
             groups: parsed.groups,
+            restoredTotal: Number.isFinite(parsed.restoredTotal) ? parsed.restoredTotal : null,
           };
         }
       } catch { /* ignore */ }
