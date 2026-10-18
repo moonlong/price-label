@@ -156,6 +156,15 @@ export class Store {
     return { ok: true, favorite: c.favorite };
   }
 
+  /** 仅标记「最近使用」（不改会话），供商品标签等场景调用。 */
+  markRecent(no) {
+    const c = this.config.customers.find((x) => x.no === no);
+    if (!c) return { ok: false };
+    this.recents[no] = Date.now();
+    this._persist();
+    return { ok: true };
+  }
+
   /** 客户排序：星标在前（按编号），其次最近使用（最近在前），其余按编号。 */
   sortedCustomers() {
     const fav = this.config.customers.filter((c) => c.favorite).sort((a, b) => a.no - b.no);

@@ -109,6 +109,17 @@ html, body {
   gap: 8px;
   align-items: center;
 }
+.lock-btn {
+  margin-left: auto;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 18px;
+  line-height: 1;
+  padding: 6px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.lock-btn.locked { background: #fef2f2; border-color: var(--red); }
 .selects { display: flex; gap: 8px; flex: 1; }
 .selects select {
   flex: 1;
@@ -688,6 +699,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
 }
 .label-batch li .del:active { color: #dc2626; background: #fee2e2; }
 .label-batch .empty { color: var(--muted); justify-content: center; }
+.label-batch li.editing { background: #eff6ff; border-radius: 6px; }
 
 /* 商品标签键盘：3 列数字网格 + 底部 00/0/⌫ + 添加宽键 */
 #label-keypad .key-row { grid-template-columns: repeat(3, 1fr); }

@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.51.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.51.0';
-import { buildCpcl } from './core/cpcl.js?v=1.51.0';
-import { buildTspl } from './core/tspl.js?v=1.51.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.51.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.51.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.51.0';
-import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.51.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.51.0';
+import { Store } from './core/store.js?v=1.52.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.52.0';
+import { buildCpcl } from './core/cpcl.js?v=1.52.0';
+import { buildTspl } from './core/tspl.js?v=1.52.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.52.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.52.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.52.0';
+import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.52.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.52.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -102,6 +102,7 @@ const el = {
   labelClear: $('label-clear'),
   tabPrice: $('tab-price'),
   tabQty: $('tab-qty'),
+  labelLock: $('label-lock'),
   labelManage: $('label-manage'),
   labelPrint: $('label-print'),
 };
@@ -1132,6 +1133,8 @@ let labelUnit = 'p';
 let labelActive = 'price'; // 'price' | 'qty'
 let labelSearch = '';
 let labelPicking = false;
+let labelEditingIndex = null; // 正在编辑的条目下标（null = 新增）
+let labelLocked = true; // 页面锁：防止误触刷新
 
 function renderLabelCustomerPick() {
   // 选中的客户被删除后自动清空
@@ -1184,6 +1187,7 @@ function renderLabelCustomerPick() {
         return;
       }
       labelCustomer = { no: c.no, name: c.name };
+      store.markRecent(c.no); // 记录「最近使用」，让客户列表按最近排序
       labelPicking = false;
       labelSearch = '';
       el.labelCustomerSearch.value = '';
@@ -1224,6 +1228,7 @@ function renderLabelBatch() {
   const unit = labelUnit.trim() || 'p';
   list.forEach((item, i) => {
     const li = document.createElement('li');
+    if (i === labelEditingIndex) li.className = 'editing';
     const num = document.createElement('span');
     num.className = 'num';
     num.textContent = String(i + 1);
@@ -1238,21 +1243,34 @@ function renderLabelBatch() {
     copy.type = 'button';
     copy.title = '复制此条（客户/价格/数量相同）';
     copy.textContent = '复制';
-    copy.onclick = () => {
+    copy.addEventListener('click', (e) => {
+      e.stopPropagation();
       const r = labelBatch.copy(i);
       if (!r.ok) return toast(r.error);
       renderLabelAll();
-    };
+    });
     const del = document.createElement('button');
     del.className = 'del';
     del.type = 'button';
     del.title = '删除此条';
     del.textContent = '×';
-    del.onclick = () => {
+    del.addEventListener('click', (e) => {
+      e.stopPropagation();
       labelBatch.remove(i);
+      if (labelEditingIndex === i) labelEditingIndex = null;
       renderLabelAll();
-    };
+    });
     li.append(num, nm, txt, copy, del);
+    // 点条目本身（除复制/删除）→ 载入输入区编辑
+    li.addEventListener('click', () => {
+      const found = store.getCustomers().find((c) => c.name === item.name);
+      labelCustomer = { no: found ? found.no : null, name: item.name };
+      labelPrice = String(item.price);
+      labelQty = item.qty != null ? String(item.qty) : '';
+      labelActive = 'price';
+      labelEditingIndex = i;
+      renderLabelAll();
+    });
     el.labelBatch.appendChild(li);
   });
 }
@@ -1272,6 +1290,7 @@ function renderLabelAll() {
   renderLabelBatch();
   renderLabelInput();
   el.labelPrint.textContent = labelBatch.count > 0 ? `打印 ${labelBatch.count} 张` : '打印';
+  el.labelAdd.textContent = labelEditingIndex != null ? '更新' : '添加';
 }
 
 function labelKeyTap(key) {
@@ -1308,6 +1327,7 @@ async function doLabelPrint() {
     labelPrice = '';
     labelQty = '';
     labelActive = 'price';
+    labelEditingIndex = null;
     renderLabelAll();
     toast(`已打印 ${printed} 张`, 4000);
   } catch (e) {
@@ -1329,10 +1349,35 @@ el.labelUnit.addEventListener('input', () => {
   renderLabelBatch();
 });
 
+// 页面锁：防止误触刷新（锁定后刷新/关闭会弹确认）
+function onBeforeUnload(e) {
+  e.preventDefault();
+  e.returnValue = '';
+}
+function renderLabelLock() {
+  el.labelLock.textContent = labelLocked ? '🔒' : '🔓';
+  el.labelLock.classList.toggle('locked', labelLocked);
+}
+el.labelLock.addEventListener('click', () => {
+  labelLocked = !labelLocked;
+  if (labelLocked) window.addEventListener('beforeunload', onBeforeUnload);
+  else window.removeEventListener('beforeunload', onBeforeUnload);
+  renderLabelLock();
+});
+if (labelLocked) window.addEventListener('beforeunload', onBeforeUnload);
+renderLabelLock();
+
 el.labelAdd.addEventListener('click', () => {
   if (!labelCustomer) return toast('请先选择客户');
-  const r = labelBatch.add(labelCustomer.name, labelPrice, labelQty);
-  if (!r.ok) return toast(r.error);
+  let r;
+  if (labelEditingIndex != null) {
+    r = labelBatch.replace(labelEditingIndex, labelCustomer.name, labelPrice, labelQty);
+    if (!r.ok) return toast(r.error);
+    labelEditingIndex = null;
+  } else {
+    r = labelBatch.add(labelCustomer.name, labelPrice, labelQty);
+    if (!r.ok) return toast(r.error);
+  }
   labelPrice = '';
   labelQty = '';
   labelActive = 'price';

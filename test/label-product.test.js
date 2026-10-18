@@ -56,6 +56,21 @@ test('ProductLabelBatch：copy 复制同款条目，插在原条后，受上限�
   assert.equal(b.copy(999).ok, false);
 });
 
+test('ProductLabelBatch：replace 更新指定条目，校验同 add', () => {
+  const b = new ProductLabelBatch(10);
+  b.add('佐藤', 540, null);
+  b.add('田中', 300, null);
+  const r = b.replace(0, '鈴木', 700, '10');
+  assert.equal(r.ok, true);
+  assert.equal(b.list()[0].name, '鈴木');
+  assert.equal(b.list()[0].price, 700);
+  assert.equal(b.list()[0].qty, '10');
+  assert.equal(b.list()[1].name, '田中'); // 第二条不受影响
+  assert.equal(b.replace(999, 'x', 1, null).ok, false); // 越界
+  assert.equal(b.replace(0, '', 1, null).ok, false); // 客户名空
+  assert.equal(b.replace(0, 'x', 0, null).ok, false); // 价格0
+});
+
 test('computeLayout noDate：不预留日期行，正文可用高度更大', () => {
   const W = mmToDots(40);
   const H = mmToDots(30);

@@ -77,6 +77,23 @@ export class ProductLabelBatch {
     return { ok: true, item };
   }
 
+  /** 更新指定条目的内容（用于编辑）。 */
+  replace(index, name, price, qty) {
+    if (!Number.isInteger(index) || index < 0 || index >= this.items.length) return { ok: false, error: '该条不存在' };
+    const nm = String(name || '').trim();
+    if (!nm) return { ok: false, error: '请先选择客户' };
+    const p = Number(price);
+    if (!Number.isInteger(p) || p <= 0) return { ok: false, error: '价格必须为正整数' };
+    let q = null;
+    if (qty != null && String(qty).trim() !== '') {
+      const n = Number(qty);
+      if (!Number.isInteger(n) || n <= 0) return { ok: false, error: '数量必须为正整数' };
+      q = String(n);
+    }
+    this.items[index] = { name: nm, price: p, qty: q };
+    return { ok: true };
+  }
+
   clear() {
     this.items = [];
     return { ok: true };
