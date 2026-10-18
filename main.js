@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.55.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.55.0';
-import { buildCpcl } from './core/cpcl.js?v=1.55.0';
-import { buildTspl } from './core/tspl.js?v=1.55.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.55.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.55.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.55.0';
-import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.55.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.55.0';
+import { Store } from './core/store.js?v=1.56.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.56.0';
+import { buildCpcl } from './core/cpcl.js?v=1.56.0';
+import { buildTspl } from './core/tspl.js?v=1.56.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.56.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.56.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.56.0';
+import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.56.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.56.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -102,6 +102,7 @@ const el = {
   labelClear: $('label-clear'),
   labelToggle: $('label-toggle'),
   labelLock: $('label-lock'),
+  labelSound: $('label-sound'),
   labelManage: $('label-manage'),
   labelPrint: $('label-print'),
 };
@@ -1135,6 +1136,7 @@ let labelSearch = '';
 let labelPicking = false;
 let labelEditingIndex = null; // 正在编辑的条目下标（null = 新增）
 let labelLocked = true; // 页面锁：防止误触刷新
+let labelSound = true; // 添加提示音开关
 
 function renderLabelCustomerPick() {
   // 选中的客户被删除后自动清空
@@ -1371,6 +1373,7 @@ renderLabelLock();
 // 添加成功反馈：短提示音 + 按钮闪绿
 let audioCtx = null;
 function beep() {
+  if (!labelSound) return;
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
@@ -1392,6 +1395,15 @@ function flashAddButton() {
   el.labelAdd.classList.add('flash');
   setTimeout(() => el.labelAdd.classList.remove('flash'), 200);
 }
+function renderLabelSound() {
+  el.labelSound.textContent = labelSound ? '🔊' : '🔇';
+  el.labelSound.classList.toggle('muted', !labelSound);
+}
+el.labelSound.addEventListener('click', () => {
+  labelSound = !labelSound;
+  renderLabelSound();
+});
+renderLabelSound();
 
 el.labelAdd.addEventListener('click', () => {
   if (!labelCustomer) return toast('请先选择客户');
