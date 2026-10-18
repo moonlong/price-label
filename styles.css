@@ -741,8 +741,10 @@ hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
   background: var(--blue);
   color: #fff;
   cursor: pointer;
+  transition: background-color 0.12s;
 }
 .key-add:active { filter: brightness(0.95); }
+.key-add.flash { background: #16a34a; }
 
 /* 主按钮（打印） */
 .primary-btn {

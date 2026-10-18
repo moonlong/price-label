@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.54.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.54.0';
-import { buildCpcl } from './core/cpcl.js?v=1.54.0';
-import { buildTspl } from './core/tspl.js?v=1.54.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.54.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.54.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.54.0';
-import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.54.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.54.0';
+import { Store } from './core/store.js?v=1.55.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.55.0';
+import { buildCpcl } from './core/cpcl.js?v=1.55.0';
+import { buildTspl } from './core/tspl.js?v=1.55.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.55.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.55.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.55.0';
+import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.55.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.55.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -323,9 +323,10 @@ class PrintService {
       } catch (e) { /* 忽略 */ }
       try {
         // 1) 发送打印命令（SetDensity … PageEnd），位图行是单向无响应
+        const BITMAP_CMDS = new Set([0x83, 0x84, 0x85]);
         for (let i = 0; i < cmds.length; i++) {
-          await writeChunks(this.writeChar, cmds[i], 200);
-          await new Promise((r) => setTimeout(r, 10));
+          const delay = BITMAP_CMDS.has(cmds[i][2]) ? 5 : 25; // 位图连发、控制命令等 ACK
+          await writeChunks(this.writeChar, cmds[i], 200, delay);
         }
         // 2) 轮询 PrintStatus，直到 page >= totalPages(1) 或超时
         for (let poll = 0; poll < 12; poll++) {
@@ -377,13 +378,13 @@ class PrintService {
   }
 }
 
-async function writeChunks(char, data, chunkSize = 20) {
+async function writeChunks(char, data, chunkSize = 20, delay = 10) {
   const noResponse = char.properties.writeWithoutResponse;
   for (let i = 0; i < data.length; i += chunkSize) {
     const chunk = data.slice(i, i + chunkSize);
     if (noResponse) await char.writeValueWithoutResponse(chunk);
     else await char.writeValueWithResponse(chunk);
-    await new Promise((r) => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, delay));
   }
 }
 
@@ -1367,6 +1368,31 @@ el.labelLock.addEventListener('click', () => {
 if (labelLocked) window.addEventListener('beforeunload', onBeforeUnload);
 renderLabelLock();
 
+// 添加成功反馈：短提示音 + 按钮闪绿
+let audioCtx = null;
+function beep() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!audioCtx) audioCtx = new AC();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.value = 0.12;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+    osc.stop(audioCtx.currentTime + 0.12);
+  } catch (e) { /* 忽略 */ }
+}
+function flashAddButton() {
+  el.labelAdd.classList.add('flash');
+  setTimeout(() => el.labelAdd.classList.remove('flash'), 200);
+}
+
 el.labelAdd.addEventListener('click', () => {
   if (!labelCustomer) return toast('请先选择客户');
   let r;
@@ -1381,6 +1407,8 @@ el.labelAdd.addEventListener('click', () => {
   // 价格/数量保留（当模板），只重置激活项为价格
   labelActive = 'price';
   renderLabelAll();
+  flashAddButton();
+  beep();
 });
 
 el.labelConnect.addEventListener('click', () => labelPrint.connect());
