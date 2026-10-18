@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.57.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.57.0';
-import { buildCpcl } from './core/cpcl.js?v=1.57.0';
-import { buildTspl } from './core/tspl.js?v=1.57.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.57.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.57.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.57.0';
-import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.57.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.57.0';
+import { Store } from './core/store.js?v=1.58.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.58.0';
+import { buildCpcl } from './core/cpcl.js?v=1.58.0';
+import { buildTspl } from './core/tspl.js?v=1.58.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.58.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.58.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.58.0';
+import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.58.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.58.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -86,6 +86,7 @@ const el = {
   labelHome: $('label-home'),
   // 商品标签页
   labelContextBar: $('label-context-bar'),
+  labelContextName: $('label-context-name'),
   labelCustomerSearch: $('label-customer-search'),
   labelCustomerList: $('label-customer-list'),
   labelConnect: $('label-connect'),
@@ -1286,7 +1287,9 @@ function renderLabelInput() {
 }
 
 function renderLabelAll() {
-  el.labelContextBar.textContent = labelCustomer ? `🏷️ ${labelCustomer.name}` : '🏷️ 未选择客户';
+  const hasC = !!labelCustomer;
+  el.labelContextName.textContent = hasC ? labelCustomer.name : '未选择';
+  el.labelContextName.classList.toggle('empty', !hasC);
   renderLabelCustomerPick();
   renderLabelBatch();
   renderLabelInput();

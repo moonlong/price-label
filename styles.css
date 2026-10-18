@@ -37,15 +37,33 @@ html, body {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 2px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
 }
+.context-bar::before {
+  content: '';
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--blue);
+  flex: none;
+}
+.context-bar .c-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+.context-bar .c-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+.context-bar .c-name.empty { color: var(--muted); font-weight: 500; }
 
 /* 客户搜索框 */
 .customer-search {
