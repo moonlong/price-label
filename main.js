@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.47.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.47.0';
-import { buildCpcl } from './core/cpcl.js?v=1.47.0';
-import { buildTspl } from './core/tspl.js?v=1.47.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.47.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.47.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.47.0';
-import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.47.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.47.0';
+import { Store } from './core/store.js?v=1.48.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.48.0';
+import { buildCpcl } from './core/cpcl.js?v=1.48.0';
+import { buildTspl } from './core/tspl.js?v=1.48.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.48.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.48.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.48.0';
+import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.48.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.48.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -299,7 +299,6 @@ class PrintService {
 
     if (proto === 'niimbot') {
       const cmds = buildNiimbotCommands(label, labelSize, printCfg, { noDate });
-      const acks = [];
       const rawAcks = [];
       const handlers = [];
       // 订阅所有 notify 特征（与诊断一致，避免漏接）
@@ -312,7 +311,6 @@ class PrintService {
             if (!c.properties || !c.properties.notify) continue;
             const h = (e) => {
               const bytes = Array.from(new Uint8Array(e.target.value.buffer));
-              acks.push(`${shortUuid(c.uuid)}:${bytes.map((b) => b.toString(16).padStart(2, '0')).join('')}`);
               rawAcks.push(bytes);
             };
             c.addEventListener('characteristicvaluechanged', h);
@@ -348,14 +346,8 @@ class PrintService {
       } finally {
         for (const [c, h] of handlers) c.removeEventListener('characteristicvaluechanged', h);
       }
-      // 唯一响应 + 次数摘要（便于复制）
-      const counts = new Map();
-      for (const a of acks) counts.set(a, (counts.get(a) || 0) + 1);
-      const ackHex = Array.from(counts.entries())
-        .map(([k, v]) => (v > 1 ? `${k} ×${v}` : k))
-        .join(' | ');
-      this.ui.setStatus(`已发送 ${cmds.length} 条，ACK(${acks.length}): ${ackHex}`);
-      return { ok: true, acks: acks, ackHex };
+      this.ui.setStatus('打印完成');
+      return { ok: true };
     }
 
     let data;
@@ -1287,18 +1279,16 @@ async function doLabelPrint() {
   if (labelBatch.count === 0) return toast('请先添加标签');
   const unit = labelUnit.trim() || 'p';
   try {
-    let ackHex = '';
     for (const item of labelBatch.list()) {
       const label = buildProductLabel(item.name, item.price, item.qty, unit);
-      const res = await labelPrint.print(label, {
+      await labelPrint.print(label, {
         labelSize: store.getProductLabel(),
         print: store.getProductPrint(),
         noDate: true,
         proto: 'niimbot',
       });
-      if (res && res.ackHex) ackHex = res.ackHex;
     }
-    toast(`已打印 ${labelBatch.count} 张${ackHex ? ' · ACK: ' + ackHex : ''}`, 4000);
+    toast(`已打印 ${labelBatch.count} 张`, 4000);
   } catch (e) {
     toast('打印失败：' + (e && e.message ? e.message : e));
   }
