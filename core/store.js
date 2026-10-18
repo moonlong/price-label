@@ -102,6 +102,8 @@ export class Store {
   getCustomers() { return this.config.customers; }
   getLabel() { return this.config.label; }
   getPrint() { return this.config.print; }
+  getProductLabel() { return this.config.productLabel || { widthMm: 40, heightMm: 30 }; }
+  getProductPrint() { return this.config.productPrint || { offsetXmm: 0, offsetYmm: 0 }; }
 
   importConfig(text) {
     let parsed;

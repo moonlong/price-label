@@ -65,3 +65,49 @@ test('排版：超长内容自动缩小以免溢出', () => {
   });
   assert.ok(L.blockBottom <= L.dateY);
 });
+
+test('排版：固定字号模式（商品标签）留白居中、不填满宽度', () => {
+  const texts = ['山田太郎', '540'];
+  const L = computeLayout(texts, W, H, {
+    noDate: true,
+    fixedSizes: [Math.round(H * 0.19), Math.round(H * 0.26)],
+    marginX: Math.round(W * 0.12),
+    marginTop: Math.round(H * 0.12),
+    marginBottom: Math.round(H * 0.12),
+    lineGap: Math.round(H * 0.06),
+    center: true,
+  }, fakeMeasure);
+
+  // 固定字号生效：客户名 ~19% 高，价格 ~26% 高（价格更醒目）
+  assert.ok(Math.abs(L.sizes[0] - Math.round(H * 0.19)) < 1, `名字号 ${L.sizes[0]}`);
+  assert.ok(Math.abs(L.sizes[1] - Math.round(H * 0.26)) < 1, `价格字号 ${L.sizes[1]}`);
+  assert.ok(L.sizes[1] > L.sizes[0], '价格应大于客户名');
+  // 不填满宽度（留白）：短价格只占约一半宽，客户名不溢出即可
+  const nameW = fakeMeasure(texts[0], L.sizes[0]);
+  const priceW = fakeMeasure(texts[1], L.sizes[1]);
+  assert.ok(nameW / L.availW < 0.95, `客户名过宽 ${nameW}/${L.availW}`);
+  assert.ok(priceW / L.availW < 0.8, `价格过宽 ${priceW}/${L.availW}`);
+  // 无日期
+  assert.equal(L.dateLineH, 0);
+});
+
+test('排版：固定字号每行独立缩小（长名字不拖累价格）', () => {
+  const longName = ['山田太郎花子', '10000']; // 6 个日文名 + 5 位价
+  const L = computeLayout(longName, W, H, {
+    noDate: true,
+    fixedSizes: [Math.round(H * 0.19), Math.round(H * 0.26)],
+    marginX: Math.round(W * 0.12),
+    marginTop: Math.round(H * 0.12),
+    marginBottom: Math.round(H * 0.12),
+    lineGap: Math.round(H * 0.06),
+    center: true,
+  }, fakeMeasure);
+
+  // 两行都不溢出
+  longName.forEach((t, i) => {
+    assert.ok(fakeMeasure(t, L.sizes[i]) <= L.availW + 1, `第${i + 1}行溢出`);
+  });
+  // 价格保持满字号（名字长不影响价格），名字被缩小
+  assert.ok(Math.abs(L.sizes[1] - Math.round(H * 0.26)) < 1, `价格被拖累 ${L.sizes[1]}`);
+  assert.ok(L.sizes[0] < Math.round(H * 0.19), `名字未缩小 ${L.sizes[0]}`);
+});

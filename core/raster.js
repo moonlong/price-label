@@ -35,22 +35,35 @@ export function computeLayout(mainTexts, W, H, opts, measure) {
   const marginTop = opts.marginTop ?? Math.round(H * 0.045);
   const marginBottom = opts.marginBottom ?? Math.round(H * 0.03);
   const lineGap = opts.lineGap ?? Math.round(H * 0.02);
-  const dateGap = opts.dateGap ?? Math.round(H * 0.075);
   const growCap = opts.growCap ?? 1.35;
+  const noDate = opts.noDate === true;
+  const center = opts.center === true;
 
   const availW = W - marginX * 2;
-  const dateSize = Math.max(12, Math.round(H * 0.085));
-  const dateLineH = Math.round(dateSize * 1.2);
+  const dateGap = noDate ? 0 : (opts.dateGap ?? Math.round(H * 0.075));
+  const dateSize = noDate ? 0 : Math.max(12, Math.round(H * 0.085));
+  const dateLineH = noDate ? 0 : Math.round(dateSize * 1.2);
   const availH = H - marginTop - marginBottom - dateLineH - dateGap;
 
-  // 每行「刚好填满可用宽度」的字号，再用倍率上限保持各行视觉一致
-  const REF = 100;
-  const fitSizes = mainTexts.map((t) => {
-    const w = measure(t, REF);
-    return w > 0 ? (availW / w) * REF : REF;
-  });
-  const sizeW = Math.min(...fitSizes);
-  let sizes = fitSizes.map((s) => Math.min(s, sizeW * growCap));
+  // 固定字号模式（商品标签用）：直接给定每行字号，不做「填满宽度」
+  let sizes;
+  if (Array.isArray(opts.fixedSizes) && opts.fixedSizes.length === mainTexts.length) {
+    sizes = opts.fixedSizes.slice();
+    // 每行独立缩小到不溢出（长名字只缩名字，不拖累价格）
+    mainTexts.forEach((t, i) => {
+      const w = measure(t, sizes[i]);
+      if (w > availW && w > 0) sizes[i] = sizes[i] * (availW / w);
+    });
+  } else {
+    // 每行「刚好填满可用宽度」的字号，再用倍率上限保持各行视觉一致
+    const REF = 100;
+    const fitSizes = mainTexts.map((t) => {
+      const w = measure(t, REF);
+      return w > 0 ? (availW / w) * REF : REF;
+    });
+    const sizeW = Math.min(...fitSizes);
+    sizes = fitSizes.map((s) => Math.min(s, sizeW * growCap));
+  }
   let lineHs = sizes.map((s) => Math.round(s * 1.18));
 
   const blockHeight = (hs) => hs.reduce((a, b) => a + b, 0) + lineGap * Math.max(0, hs.length - 1);
@@ -63,11 +76,18 @@ export function computeLayout(mainTexts, W, H, opts, measure) {
     blockH = blockHeight(lineHs);
   }
 
-  // 剩余高度分摊到顶部与行间距，让内容饱满而不留大片空白
+  // 剩余高度：商品标签上下居中，结算标签分摊到顶部与行间距（饱满）
   const extra = Math.max(0, availH - blockH);
   const n = sizes.length;
-  const padTop = Math.round(extra * 0.35);
-  const gapExtra = n > 1 ? Math.round((extra * 0.45) / (n - 1)) : 0;
+  let padTop;
+  let gapExtra;
+  if (center) {
+    padTop = Math.round(extra / 2);
+    gapExtra = 0;
+  } else {
+    padTop = Math.round(extra * 0.35);
+    gapExtra = n > 1 ? Math.round((extra * 0.45) / (n - 1)) : 0;
+  }
 
   const positions = [];
   let y = marginTop + padTop;
@@ -132,12 +152,36 @@ export function renderLabelBitmap(label, labelSize = { widthMm: 50, heightMm: 50
     ctx.fillText(mainTexts[i], W / 2 + ox, layout.positions[i] + oy + Math.max(0, (boxH - layout.sizes[i]) / 2));
   }
 
-  ctx.font = `${layout.dateSize}px ${FONT_STACK}`;
-  ctx.fillText(
-    label.date,
-    W / 2 + ox,
-    layout.dateY + oy + Math.max(0, (layout.dateLineH - layout.dateSize) / 2),
-  );
+  if (!opts.noDate) {
+    ctx.font = `${layout.dateSize}px ${FONT_STACK}`;
+    ctx.fillText(
+      label.date,
+      W / 2 + ox,
+      layout.dateY + oy + Math.max(0, (layout.dateLineH - layout.dateSize) / 2),
+    );
+  }
+
+  // 纯留白 + 分隔线 + 中央小菱形（最克制，线两侧留白，不铺满整纸宽）
+  if (opts.frame === 'sakura') {
+    ctx.fillStyle = '#000000';
+    const cx = Math.round(W / 2);
+    // 名字/价格之间的细线 + 中央小菱形
+    if (layout.positions.length >= 2) {
+      const y = Math.round((layout.positions[0] + layout.lineHs[0] + layout.positions[1]) / 2);
+      const r = 5; // 菱形半宽（不变）
+      const gap = 4;
+      const m = Math.round(W * 0.08); // 线两侧留白
+      ctx.fillRect(m, y, cx - r - gap - m, 1); // 左段
+      ctx.fillRect(cx + r + gap, y, W - m - (cx + r + gap), 1); // 右段
+      ctx.beginPath();
+      ctx.moveTo(cx, y - r);
+      ctx.lineTo(cx + r, y);
+      ctx.lineTo(cx, y + r);
+      ctx.lineTo(cx - r, y);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
 
   // 取像素 → 1-bit（MSB 在左）
   // 位约定（与本打印机一致）：bit=1 → 白（不打印），bit=0 → 黑（打印）

@@ -1,10 +1,12 @@
-import { Store } from './core/store.js?v=1.20.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.20.0';
-import { buildCpcl } from './core/cpcl.js?v=1.20.0';
-import { buildTspl } from './core/tspl.js?v=1.20.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.20.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.20.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.20.0';
+import { Store } from './core/store.js?v=1.47.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.47.0';
+import { buildCpcl } from './core/cpcl.js?v=1.47.0';
+import { buildTspl } from './core/tspl.js?v=1.47.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.47.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.47.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.47.0';
+import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.47.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.47.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -74,6 +76,32 @@ const el = {
   historyExport: $('history-export'),
   historyClose: $('history-close'),
   toast: $('toast'),
+  // 视图
+  viewHome: $('view-home'),
+  viewSettle: $('view-settle'),
+  viewLabel: $('view-label'),
+  navSettle: $('nav-settle'),
+  navLabel: $('nav-label'),
+  settleHome: $('settle-home'),
+  labelHome: $('label-home'),
+  // 商品标签页
+  labelContextBar: $('label-context-bar'),
+  labelCustomerSearch: $('label-customer-search'),
+  labelCustomerList: $('label-customer-list'),
+  labelConnect: $('label-connect'),
+  labelConnectDot: $('label-connect-dot'),
+  labelConnectLabel: $('label-connect-label'),
+  labelPrinterStatus: $('label-printer-status'),
+  labelBatch: $('label-batch'),
+  labelBatchCount: $('label-batch-count'),
+  labelPrice: $('label-price'),
+  labelQty: $('label-qty'),
+  labelUnit: $('label-unit'),
+  labelKeypad: $('label-keypad'),
+  labelAdd: $('label-add'),
+  labelClear: $('label-clear'),
+  labelManage: $('label-manage'),
+  labelPrint: $('label-print'),
 };
 
 let expr = '';
@@ -138,68 +166,91 @@ function shortUuid(uuid) {
   return s.startsWith('0000') ? s.slice(4, 8) : s.slice(0, 8);
 }
 
-const printService = {
-  device: null,
-  server: null,
-  writeChar: null,
-  connected: false,
+class PrintService {
+  /** @param {string} printerKey 用于记住「本页默认打印机」的 localStorage key
+   *  @param {{setConnect:(ok:boolean)=>void, setStatus:(text:string)=>void}} ui */
+  constructor(printerKey, ui) {
+    this.printerKey = printerKey;
+    this.ui = ui;
+    this.device = null;
+    this.server = null;
+    this.writeChar = null;
+    this.connected = false;
+  }
+
+  _storedId() {
+    if (!storage) return null;
+    try { return storage.getItem(this.printerKey); } catch { return null; }
+  }
+  _storeId(id) {
+    if (!storage || !id) return;
+    try { storage.setItem(this.printerKey, id); } catch { /* ignore */ }
+  }
 
   async connect() {
     if (!('bluetooth' in navigator)) {
-      setConnect(false);
-      setStatus('当前浏览器不支持 Web Bluetooth');
+      this.ui.setConnect(false);
+      this.ui.setStatus('当前浏览器不支持 Web Bluetooth');
       toast('当前浏览器不支持蓝牙');
       return;
     }
     try {
-      setStatus('正在尝试重连最近打印机…');
+      this.ui.setStatus('正在尝试重连最近打印机…');
       const device = await this._findRecentDevice();
       if (!device) {
-        setStatus('未找到可重连设备，请选择打印机');
+        this.ui.setStatus('未找到可重连设备，请选择打印机');
         this.device = await navigator.bluetooth.requestDevice({
           acceptAllDevices: true,
           optionalServices: SERVICE_CANDIDATES,
         });
+        this._storeId(this.device.id);
       } else {
         this.device = device;
       }
       this.server = await this.device.gatt.connect();
       this.connected = true;
-      setConnect(true);
-      setStatus('已连接，正在发现服务…');
+      this.ui.setConnect(true);
+      this.ui.setStatus('已连接，正在发现服务…');
       const infos = await this.discover();
+      this.infos = infos;
       console.table(infos);
       this.writeChar = await this.pickWriteChar(infos);
       if (!this.writeChar) {
-        setStatus(`已连接，但未找到可写特征：${JSON.stringify(infos)}`);
+        this.ui.setStatus(`已连接，但未找到可写特征：${JSON.stringify(infos)}`);
         toast('未找到可写特征，请查看状态栏');
       } else {
-        setStatus(`打印机就绪 · 写特征 ${shortUuid(this.writeChar.uuid)}`);
+        this.ui.setStatus(`打印机就绪 · 写特征 ${shortUuid(this.writeChar.uuid)}`);
         toast('打印机就绪');
       }
     } catch (e) {
       this.connected = false;
-      setConnect(false);
-      setStatus(`连接失败：${e && e.message ? e.message : e}`);
+      this.ui.setConnect(false);
+      this.ui.setStatus(`连接失败：${e && e.message ? e.message : e}`);
       toast('连接失败或已取消');
     }
-  },
+  }
 
-  /** 从最近授权的设备中找一台能连上的打印机；找不到返回 null。 */
+  /** 优先重连「本页记住的那台」，其次试其它已授权设备；都连不上返回 null。 */
   async _findRecentDevice() {
     if (!navigator.bluetooth.getDevices) return null;
     try {
       const devices = await navigator.bluetooth.getDevices();
+      const stored = this._storedId();
+      if (stored) {
+        const hit = devices.find((d) => d.id === stored);
+        if (hit) {
+          if (hit.gatt.connected) return hit;
+          try { await hit.gatt.connect(); return hit; } catch (e) { /* 不在范围，继续 */ }
+        }
+      }
       for (const d of devices) {
+        if (d.id === stored) continue;
         if (d.gatt.connected) return d;
-        try {
-          await d.gatt.connect();
-          return d;
-        } catch (e) { /* 该设备不在范围，试下一个 */ }
+        try { await d.gatt.connect(); return d; } catch (e) { /* 试下一个 */ }
       }
     } catch (e) { /* getDevices 不可用，忽略 */ }
     return null;
-  },
+  }
 
   async discover() {
     const services = await this.server.getPrimaryServices();
@@ -211,7 +262,7 @@ const printService = {
       }
     }
     return result;
-  },
+  }
 
   async pickWriteChar(infos) {
     for (const uuid of W_CHAR_CANDIDATES) {
@@ -221,7 +272,7 @@ const printService = {
     const writable = infos.find((i) => /write/i.test(i.props));
     if (writable) return this._findChar(writable.char);
     return null;
-  },
+  }
 
   async _findChar(uuid) {
     if (!this.server) return null;
@@ -233,37 +284,104 @@ const printService = {
       }
     }
     return null;
-  },
+  }
 
-  async print(label) {
+  /** 打印一张标签。opts: { labelSize, print, noDate, proto }，缺省用结算的尺寸/偏移。 */
+  async print(label, opts = {}) {
     if (!this.server || !this.writeChar) {
       throw new Error('打印机未就绪：请先点“连接打印机”');
     }
-    const proto = (document.getElementById('protocol') || {}).value || 'tspl-rast';
+    const protoEl = document.getElementById('protocol');
+    const proto = opts.proto || (protoEl ? protoEl.value : 'tspl-rast') || 'tspl-rast';
+    const labelSize = opts.labelSize || store.getLabel();
+    const printCfg = opts.print || store.getPrint();
+    const noDate = opts.noDate === true;
+
+    if (proto === 'niimbot') {
+      const cmds = buildNiimbotCommands(label, labelSize, printCfg, { noDate });
+      const acks = [];
+      const rawAcks = [];
+      const handlers = [];
+      // 订阅所有 notify 特征（与诊断一致，避免漏接）
+      try {
+        const services = await this.server.getPrimaryServices();
+        for (const s of services) {
+          let chars = [];
+          try { chars = await s.getCharacteristics(); } catch (e) { continue; }
+          for (const c of chars) {
+            if (!c.properties || !c.properties.notify) continue;
+            const h = (e) => {
+              const bytes = Array.from(new Uint8Array(e.target.value.buffer));
+              acks.push(`${shortUuid(c.uuid)}:${bytes.map((b) => b.toString(16).padStart(2, '0')).join('')}`);
+              rawAcks.push(bytes);
+            };
+            c.addEventListener('characteristicvaluechanged', h);
+            handlers.push([c, h]);
+            try { await c.startNotifications(); } catch (e) { /* 忽略 */ }
+          }
+        }
+      } catch (e) { /* 忽略 */ }
+      try {
+        // 1) 发送打印命令（SetDensity … PageEnd），位图行是单向无响应
+        for (let i = 0; i < cmds.length; i++) {
+          await writeChunks(this.writeChar, cmds[i], 200);
+          await new Promise((r) => setTimeout(r, 10));
+        }
+        // 2) 轮询 PrintStatus，直到 page >= totalPages(1) 或超时
+        for (let poll = 0; poll < 12; poll++) {
+          await writeChunks(this.writeChar, buildPrintStatusPacket(), 200);
+          await new Promise((r) => setTimeout(r, 300));
+          let done = false;
+          for (let i = rawAcks.length - 1; i >= 0; i--) {
+            const b = rawAcks[i];
+            if (b.length >= 6 && b[2] === 0xb3) {
+              const page = (b[4] << 8) | b[5]; // 大端
+              if (page >= 1) { done = true; break; }
+              break;
+            }
+          }
+          if (done) break;
+        }
+        // 3) 结束打印
+        await writeChunks(this.writeChar, buildPrintEndPacket(), 200);
+        await new Promise((r) => setTimeout(r, 400));
+      } finally {
+        for (const [c, h] of handlers) c.removeEventListener('characteristicvaluechanged', h);
+      }
+      // 唯一响应 + 次数摘要（便于复制）
+      const counts = new Map();
+      for (const a of acks) counts.set(a, (counts.get(a) || 0) + 1);
+      const ackHex = Array.from(counts.entries())
+        .map(([k, v]) => (v > 1 ? `${k} ×${v}` : k))
+        .join(' | ');
+      this.ui.setStatus(`已发送 ${cmds.length} 条，ACK(${acks.length}): ${ackHex}`);
+      return { ok: true, acks: acks, ackHex };
+    }
+
     let data;
     let chunkSize = 20;
     if (proto === 'tspl-rast') {
-      data = buildTsplRaster(label, store.getLabel(), store.getPrint());
+      data = buildTsplRaster(label, labelSize, printCfg, { noDate });
       chunkSize = 180;
       console.log('[TSPL 位图]', data.length, 'bytes');
     } else if (proto === 'tspl') {
-      const tspl = buildTspl(label, store.getLabel());
+      const tspl = buildTspl(label, labelSize);
       console.log('[TSPL 文字]', JSON.stringify(tspl));
       data = new TextEncoder().encode(tspl);
     } else if (proto === 'escpos') {
-      data = buildEscposRaster(label, store.getLabel(), store.getPrint());
+      data = buildEscposRaster(label, labelSize, printCfg);
       chunkSize = 180;
       console.log('[ESC-POS 位图]', data.length, 'bytes');
     } else {
-      const cpcl = buildCpcl(label, store.getLabel());
+      const cpcl = buildCpcl(label, labelSize);
       console.log('[CPCL]', JSON.stringify(cpcl));
       data = new TextEncoder().encode(cpcl);
     }
     await writeChunks(this.writeChar, data, chunkSize);
-    setStatus(`已发送 ${data.length} 字节（${proto}）`);
+    this.ui.setStatus(`已发送 ${data.length} 字节（${proto}）`);
     return { ok: true };
-  },
-};
+  }
+}
 
 async function writeChunks(char, data, chunkSize = 20) {
   const noResponse = char.properties.writeWithoutResponse;
@@ -284,6 +402,18 @@ function setStatus(text) {
   const node = document.getElementById('printer-status');
   if (node) node.textContent = text;
 }
+
+// 商品标签页的独立连接状态（另一台打印机）
+function setLabelConnect(ok) {
+  el.labelConnectDot.classList.toggle('ok', ok);
+  el.labelConnectLabel.textContent = ok ? '已连接' : '连接打印机';
+}
+function setLabelStatus(text) {
+  el.labelPrinterStatus.textContent = text;
+}
+
+const settlePrint = new PrintService('price-app.settlePrinterId', { setConnect, setStatus });
+const labelPrint = new PrintService('price-app.labelPrinterId', { setConnect: setLabelConnect, setStatus: setLabelStatus });
 
 // ---------- 渲染 ----------
 function scrollToKeypad() {
@@ -673,7 +803,7 @@ function onPrintSkip() {
 
 async function doPrint(label) {
   try {
-    await printService.print(label);
+    await settlePrint.print(label);
     toast('打印完成');
   } catch (e) {
     toast('打印失败：' + (e && e.message ? e.message : e));
@@ -706,7 +836,7 @@ function keyTap(key) {
   renderInput();
 }
 
-document.querySelectorAll('.keypad .key[data-key]').forEach((btn) => {
+document.querySelectorAll('#keypad .key[data-key]').forEach((btn) => {
   btn.addEventListener('click', () => keyTap(btn.dataset.key));
 });
 
@@ -809,7 +939,7 @@ el.group.addEventListener('change', () => {
   scrollToKeypad();
 });
 
-el.connect.addEventListener('click', () => printService.connect());
+el.connect.addEventListener('click', () => settlePrint.connect());
 
 el.clear.addEventListener('click', () => el.dlgClear.showModal());
 el.clearGroup.addEventListener('click', () => {
@@ -843,6 +973,7 @@ function renderManageCustomerList() {
       store.removeCustomer(c.no);
       renderManageCustomerList();
       renderAll();
+      renderLabelAll();
     };
     li.append(name, del);
     el.manageCustomerList.appendChild(li);
@@ -872,6 +1003,7 @@ el.addCustomer.addEventListener('click', () => {
     el.newCustomer.value = '';
     renderManageCustomerList();
     renderAll();
+    renderLabelAll();
     toast(`已添加「${r.name}」`);
   }
 });
@@ -894,6 +1026,7 @@ el.importApply.addEventListener('click', () => {
   expr = '';
   renderManageCustomerList();
   renderAll();
+  renderLabelAll();
   toast('导入成功');
 });
 
@@ -908,6 +1041,7 @@ el.importFile.addEventListener('change', () => {
       expr = '';
       renderManageCustomerList();
       renderAll();
+      renderLabelAll();
       toast('导入成功');
     }
     el.importFile.value = '';
@@ -995,5 +1129,250 @@ el.historyExport.addEventListener('click', () => {
   toast('已导出 CSV');
 });
 
+// ---------- 商品标签页（独立状态，不碰结算 session/groups/history） ----------
+const labelBatch = new ProductLabelBatch(10);
+let labelCustomer = null; // { no, name }
+let labelPrice = '';
+let labelQty = '';
+let labelUnit = 'p';
+let labelActive = 'price'; // 'price' | 'qty'
+let labelSearch = '';
+let labelPicking = false;
+
+function renderLabelCustomerPick() {
+  // 选中的客户被删除后自动清空
+  if (labelCustomer && !store.getCustomers().some((c) => c.no === labelCustomer.no)) {
+    labelCustomer = null;
+  }
+  const cur = labelCustomer;
+  const collapsed = cur != null && !labelPicking;
+  const q = labelSearch.trim().toLowerCase();
+  el.labelCustomerList.innerHTML = '';
+
+  const matches = (c) => {
+    if (!q) return true;
+    if (/^\d+$/.test(q)) return String(c.no).startsWith(q);
+    return c.name.toLowerCase().includes(q);
+  };
+  const items = collapsed
+    ? store.getCustomers().filter((c) => c.no === cur.no)
+    : store.sortedCustomers().filter(matches);
+
+  for (const c of items) {
+    const li = document.createElement('li');
+    if (cur && c.no === cur.no) li.classList.add('selected');
+    if (collapsed) li.classList.add('current');
+    const noEl = document.createElement('span');
+    noEl.className = 'cno';
+    noEl.textContent = c.no;
+    const nameEl = document.createElement('span');
+    nameEl.className = 'cname';
+    nameEl.textContent = c.name;
+    li.append(noEl, nameEl);
+    if (!collapsed) {
+      const star = document.createElement('button');
+      star.className = 'star' + (c.favorite ? ' on' : '');
+      star.textContent = c.favorite ? '★' : '☆';
+      star.type = 'button';
+      star.addEventListener('click', (e) => {
+        e.stopPropagation();
+        store.toggleFavorite(c.no);
+        renderLabelCustomerPick();
+      });
+      li.append(star);
+    }
+    li.addEventListener('click', () => {
+      if (collapsed) {
+        labelPicking = true;
+        labelSearch = '';
+        el.labelCustomerSearch.value = '';
+        renderLabelCustomerPick();
+        return;
+      }
+      labelCustomer = { no: c.no, name: c.name };
+      labelPicking = false;
+      labelSearch = '';
+      el.labelCustomerSearch.value = '';
+      renderLabelAll();
+      // 选中客户后自动滚动到数字键盘，方便立即输入
+      if (el.labelKeypad && el.labelKeypad.scrollIntoView) {
+        setTimeout(() => el.labelKeypad.scrollIntoView({ block: 'end', behavior: 'smooth' }), 80);
+      }
+    });
+    el.labelCustomerList.appendChild(li);
+  }
+
+  if (items.length === 0) {
+    const li = document.createElement('li');
+    li.className = 'empty-pick';
+    li.textContent = store.getCustomers().length === 0
+      ? '请先「客户管理」导入客户名单'
+      : '无匹配客户';
+    el.labelCustomerList.appendChild(li);
+  }
+  if (collapsed) {
+    labelSearch = '';
+    el.labelCustomerSearch.value = '';
+  }
+}
+
+function renderLabelBatch() {
+  el.labelBatch.innerHTML = '';
+  const list = labelBatch.list();
+  el.labelBatchCount.textContent = list.length ? `（${list.length}/10）` : '';
+  if (list.length === 0) {
+    const li = document.createElement('li');
+    li.className = 'empty';
+    li.textContent = '尚未添加';
+    el.labelBatch.appendChild(li);
+    return;
+  }
+  const unit = labelUnit.trim() || 'p';
+  list.forEach((item, i) => {
+    const li = document.createElement('li');
+    const num = document.createElement('span');
+    num.className = 'num';
+    num.textContent = String(i + 1);
+    const nm = document.createElement('span');
+    nm.className = 'bname';
+    nm.textContent = item.name;
+    const txt = document.createElement('span');
+    txt.className = 'btxt';
+    txt.textContent = item.qty ? `${item.price}/${item.qty}${unit}` : String(item.price);
+    const del = document.createElement('button');
+    del.className = 'del';
+    del.type = 'button';
+    del.title = '删除此条';
+    del.textContent = '×';
+    del.onclick = () => {
+      labelBatch.remove(i);
+      renderLabelAll();
+    };
+    li.append(num, nm, txt, del);
+    el.labelBatch.appendChild(li);
+  });
+}
+
+function renderLabelInput() {
+  el.labelPrice.value = labelPrice;
+  el.labelQty.value = labelQty;
+  el.labelPrice.classList.toggle('active', labelActive === 'price');
+  el.labelQty.classList.toggle('active', labelActive === 'qty');
+}
+
+function renderLabelAll() {
+  el.labelContextBar.textContent = labelCustomer ? `🏷️ ${labelCustomer.name}` : '🏷️ 未选择客户';
+  renderLabelCustomerPick();
+  renderLabelBatch();
+  renderLabelInput();
+  el.labelPrint.textContent = labelBatch.count > 0 ? `打印 ${labelBatch.count} 张` : '打印';
+}
+
+function labelKeyTap(key) {
+  const field = labelActive === 'price' ? 'price' : 'qty';
+  if (key === 'back') {
+    if (field === 'price') labelPrice = labelPrice.slice(0, -1);
+    else labelQty = labelQty.slice(0, -1);
+  } else if (key === 'clear') {
+    if (field === 'price') labelPrice = '';
+    else labelQty = '';
+  } else {
+    if (field === 'price') labelPrice += key;
+    else labelQty += key;
+  }
+  renderLabelInput();
+}
+
+async function doLabelPrint() {
+  if (labelBatch.count === 0) return toast('请先添加标签');
+  const unit = labelUnit.trim() || 'p';
+  try {
+    let ackHex = '';
+    for (const item of labelBatch.list()) {
+      const label = buildProductLabel(item.name, item.price, item.qty, unit);
+      const res = await labelPrint.print(label, {
+        labelSize: store.getProductLabel(),
+        print: store.getProductPrint(),
+        noDate: true,
+        proto: 'niimbot',
+      });
+      if (res && res.ackHex) ackHex = res.ackHex;
+    }
+    toast(`已打印 ${labelBatch.count} 张${ackHex ? ' · ACK: ' + ackHex : ''}`, 4000);
+  } catch (e) {
+    toast('打印失败：' + (e && e.message ? e.message : e));
+  }
+}
+
+document.querySelectorAll('#label-keypad .key[data-key]').forEach((btn) => {
+  btn.addEventListener('click', () => labelKeyTap(btn.dataset.key));
+});
+
+el.labelPrice.addEventListener('click', () => { labelActive = 'price'; renderLabelInput(); });
+el.labelQty.addEventListener('click', () => { labelActive = 'qty'; renderLabelInput(); });
+el.labelClear.addEventListener('click', () => labelKeyTap('clear'));
+el.labelUnit.addEventListener('input', () => {
+  labelUnit = el.labelUnit.value;
+  renderLabelBatch();
+});
+
+el.labelAdd.addEventListener('click', () => {
+  if (!labelCustomer) return toast('请先选择客户');
+  const r = labelBatch.add(labelCustomer.name, labelPrice, labelQty);
+  if (!r.ok) return toast(r.error);
+  labelPrice = '';
+  labelQty = '';
+  labelActive = 'price';
+  renderLabelAll();
+});
+
+el.labelConnect.addEventListener('click', () => labelPrint.connect());
+el.labelPrint.addEventListener('click', doLabelPrint);
+
+el.labelManage.addEventListener('click', () => {
+  renderManageCustomerList();
+  el.importText.value = '';
+  el.dlgManage.showModal();
+});
+
+el.labelCustomerSearch.addEventListener('focus', () => {
+  labelPicking = true;
+  labelSearch = '';
+  el.labelCustomerSearch.value = '';
+  renderLabelCustomerPick();
+});
+el.labelCustomerSearch.addEventListener('input', () => {
+  labelPicking = true;
+  labelSearch = el.labelCustomerSearch.value;
+  renderLabelCustomerPick();
+});
+el.labelCustomerSearch.addEventListener('blur', (e) => {
+  if (e.relatedTarget && el.labelCustomerList.contains(e.relatedTarget)) return;
+  setTimeout(() => {
+    if (labelPicking) {
+      labelPicking = false;
+      renderLabelCustomerPick();
+    }
+  }, 150);
+});
+
+// ---------- 视图切换 ----------
+function showView(name) {
+  el.viewHome.hidden = name !== 'home';
+  el.viewSettle.hidden = name !== 'settle';
+  el.viewLabel.hidden = name !== 'label';
+  if (name === 'settle') {
+    renderAll();
+    scrollToKeypad();
+  } else if (name === 'label') {
+    renderLabelAll();
+  }
+}
+
+el.navSettle.addEventListener('click', () => showView('settle'));
+el.navLabel.addEventListener('click', () => showView('label'));
+el.settleHome.addEventListener('click', () => showView('home'));
+el.labelHome.addEventListener('click', () => showView('home'));
+
 // 初始化
-renderAll();
+showView('home');

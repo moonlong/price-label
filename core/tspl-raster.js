@@ -4,8 +4,8 @@
 
 import { renderLabelBitmap, printToDots } from './raster.js';
 
-export function buildTsplRaster(label, labelSize = { widthMm: 50, heightMm: 50 }, print = {}) {
-  const bmp = renderLabelBitmap(label, labelSize, printToDots(print));
+export function buildTsplRaster(label, labelSize = { widthMm: 50, heightMm: 50 }, print = {}, opts = {}) {
+  const bmp = renderLabelBitmap(label, labelSize, { ...printToDots(print), ...opts });
   const wMm = labelSize.widthMm || 50;
   const hMm = labelSize.heightMm || 50;
   // 内容偏移已在 renderLabelBitmap 内部完成，位图原点固定在 0,0

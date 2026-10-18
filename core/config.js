@@ -4,12 +4,18 @@ export const DEFAULT_LABEL = Object.freeze({ widthMm: 50, heightMm: 50 });
 // 打印微调：offsetXmm 负=左移、正=右移；offsetYmm 负=上移、正=下移（默认整体略左移 1.5mm）
 export const DEFAULT_PRINT = Object.freeze({ offsetXmm: -1.5, offsetYmm: 0 });
 
+// 商品标签：40×30mm，独立打印偏移（两台打印机、独立调试，互不影响）
+export const DEFAULT_PRODUCT_LABEL = Object.freeze({ widthMm: 40, heightMm: 30 });
+export const DEFAULT_PRODUCT_PRINT = Object.freeze({ offsetXmm: 0, offsetYmm: 0 });
+
 // 默认配置：客户名单为空（干净版本，客户数据一律由「本地导入」提供，避免误用/覆盖）。
 export function createDefaultConfig() {
   return {
     version: 1,
     label: { ...DEFAULT_LABEL },
     print: { ...DEFAULT_PRINT },
+    productLabel: { ...DEFAULT_PRODUCT_LABEL },
+    productPrint: { ...DEFAULT_PRODUCT_PRINT },
     customers: [],
   };
 }
@@ -47,6 +53,14 @@ export function validateConfig(raw) {
   const offsetXmm = toNumber(printRaw.offsetXmm, DEFAULT_PRINT.offsetXmm);
   const offsetYmm = toNumber(printRaw.offsetYmm, DEFAULT_PRINT.offsetYmm);
 
+  const productLabelRaw = raw.productLabel && typeof raw.productLabel === 'object' ? raw.productLabel : {};
+  const productWidthMm = toPositiveNumber(productLabelRaw.widthMm, DEFAULT_PRODUCT_LABEL.widthMm);
+  const productHeightMm = toPositiveNumber(productLabelRaw.heightMm, DEFAULT_PRODUCT_LABEL.heightMm);
+
+  const productPrintRaw = raw.productPrint && typeof raw.productPrint === 'object' ? raw.productPrint : {};
+  const productOffsetXmm = toNumber(productPrintRaw.offsetXmm, DEFAULT_PRODUCT_PRINT.offsetXmm);
+  const productOffsetYmm = toNumber(productPrintRaw.offsetYmm, DEFAULT_PRODUCT_PRINT.offsetYmm);
+
   if (!Array.isArray(raw.customers)) return err('customers 必须是数组');
 
   // 第一遍：收集显式编号，检测重复，确定自动分配起点
@@ -82,6 +96,8 @@ export function validateConfig(raw) {
       version: 1,
       label: { widthMm, heightMm },
       print: { offsetXmm, offsetYmm },
+      productLabel: { widthMm: productWidthMm, heightMm: productHeightMm },
+      productPrint: { offsetXmm: productOffsetXmm, offsetYmm: productOffsetYmm },
       customers,
     },
   };

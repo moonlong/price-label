@@ -595,3 +595,142 @@ hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
   max-width: 90vw;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ---------- 三视图切换 ---------- */
+.view[hidden] { display: none !important; }
+.view-nav { display: flex; }
+.nav-back { font-size: 15px; padding: 2px 0; }
+
+/* 首页 */
+.home { display: flex; flex-direction: column; gap: 20px; padding-top: 24px; }
+.home-title { font-size: 22px; font-weight: 800; color: var(--text); text-align: center; margin: 0; }
+.home-list { display: flex; flex-direction: column; gap: 14px; }
+.home-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+.home-item:active { filter: brightness(0.96); }
+.home-icon { font-size: 30px; }
+.home-text { display: flex; flex-direction: column; gap: 2px; }
+.home-label { font-size: 18px; font-weight: 700; color: var(--text); }
+.home-desc { font-size: 13px; color: var(--muted); }
+
+.muted { color: var(--muted); }
+
+/* 商品标签：价格/数量/单位 输入行 */
+.label-input-row { display: flex; gap: 8px; align-items: center; }
+.label-field {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 8px;
+  font-size: 18px;
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.label-field.active { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
+.label-unit-field { flex: 0 0 56px; font-size: 15px; }
+
+/* 商品标签：批量列表 */
+.label-batch {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  height: 150px;
+  overflow-y: auto;
+  font-variant-numeric: tabular-nums;
+}
+.label-batch li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px;
+  border-bottom: 1px dashed var(--line);
+  font-size: 16px;
+}
+.label-batch li .num { color: var(--muted); font-size: 12px; min-width: 18px; flex: none; }
+.label-batch li .bname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 600; }
+.label-batch li .btxt { flex: none; color: var(--muted); font-variant-numeric: tabular-nums; }
+.label-batch li .del {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 20px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  flex: none;
+}
+.label-batch li .del:active { color: #dc2626; background: #fee2e2; }
+.label-batch .empty { color: var(--muted); justify-content: center; }
+
+/* 商品标签键盘：3 列数字网格 + 底部 00/0/⌫ + 添加宽键 */
+#label-keypad .key-row { grid-template-columns: repeat(3, 1fr); }
+#label-keypad .key { padding: 16px 0; font-size: 24px; }
+.field-clear {
+  flex: 0 0 auto;
+  padding: 12px 10px;
+  font-size: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fef2f2;
+  color: var(--red);
+  cursor: pointer;
+}
+.field-clear:active { filter: brightness(0.95); }
+.key-add {
+  width: 100%;
+  padding: 16px 0;
+  font-size: 18px;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  background: var(--blue);
+  color: #fff;
+  cursor: pointer;
+}
+.key-add:active { filter: brightness(0.95); }
+
+/* 主按钮（打印） */
+.primary-btn {
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 22px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.primary-btn:active { filter: brightness(0.95); }
+
+/* 打印诊断弹窗 */
+.diag-text {
+  margin: 0 0 10px;
+  padding: 10px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 12px;
+  line-height: 1.5;
+  border-radius: 8px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.diag-row { display: flex; gap: 8px; margin-bottom: 6px; }
+.diag-row input { flex: 1; min-width: 0; padding: 10px; font-size: 14px; border: 1px solid var(--line); border-radius: 8px; font-variant-numeric: tabular-nums; }
+.diag-hint { font-size: 12px; color: var(--muted); }
+.diag-check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text); }
+
