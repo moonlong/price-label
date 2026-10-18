@@ -35,6 +35,9 @@ test('ProductLabelBatch：最多10条、可删、校验', () => {
   assert.equal(b.remove(0).ok, true);
   assert.equal(b.count, 9);
   assert.equal(b.remove(999).ok, false);
+  assert.equal(b.clear().ok, true);
+  assert.equal(b.count, 0);
+  assert.equal(b.list().length, 0);
 });
 
 test('computeLayout noDate：不预留日期行，正文可用高度更大', () => {

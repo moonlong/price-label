@@ -67,6 +67,11 @@ export class ProductLabelBatch {
     return { ok: true };
   }
 
+  clear() {
+    this.items = [];
+    return { ok: true };
+  }
+
   list() { return this.items.slice(); }
   get count() { return this.items.length; }
 }

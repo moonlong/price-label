@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.48.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.48.0';
-import { buildCpcl } from './core/cpcl.js?v=1.48.0';
-import { buildTspl } from './core/tspl.js?v=1.48.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.48.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.48.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.48.0';
-import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.48.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.48.0';
+import { Store } from './core/store.js?v=1.49.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.49.0';
+import { buildCpcl } from './core/cpcl.js?v=1.49.0';
+import { buildTspl } from './core/tspl.js?v=1.49.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.49.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.49.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.49.0';
+import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.49.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.49.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -1278,6 +1278,7 @@ function labelKeyTap(key) {
 async function doLabelPrint() {
   if (labelBatch.count === 0) return toast('请先添加标签');
   const unit = labelUnit.trim() || 'p';
+  const printed = labelBatch.count;
   try {
     for (const item of labelBatch.list()) {
       const label = buildProductLabel(item.name, item.price, item.qty, unit);
@@ -1288,7 +1289,13 @@ async function doLabelPrint() {
         proto: 'niimbot',
       });
     }
-    toast(`已打印 ${labelBatch.count} 张`, 4000);
+    // 打印完成后清空已录入记录，准备下一次打印
+    labelBatch.clear();
+    labelPrice = '';
+    labelQty = '';
+    labelActive = 'price';
+    renderLabelAll();
+    toast(`已打印 ${printed} 张`, 4000);
   } catch (e) {
     toast('打印失败：' + (e && e.message ? e.message : e));
   }
