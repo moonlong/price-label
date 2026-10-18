@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.50.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.50.0';
-import { buildCpcl } from './core/cpcl.js?v=1.50.0';
-import { buildTspl } from './core/tspl.js?v=1.50.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.50.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.50.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.50.0';
-import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.50.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.50.0';
+import { Store } from './core/store.js?v=1.51.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.51.0';
+import { buildCpcl } from './core/cpcl.js?v=1.51.0';
+import { buildTspl } from './core/tspl.js?v=1.51.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.51.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.51.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.51.0';
+import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.51.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.51.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -100,6 +100,8 @@ const el = {
   labelKeypad: $('label-keypad'),
   labelAdd: $('label-add'),
   labelClear: $('label-clear'),
+  tabPrice: $('tab-price'),
+  tabQty: $('tab-qty'),
   labelManage: $('label-manage'),
   labelPrint: $('label-print'),
 };
@@ -1260,6 +1262,8 @@ function renderLabelInput() {
   el.labelQty.value = labelQty;
   el.labelPrice.classList.toggle('active', labelActive === 'price');
   el.labelQty.classList.toggle('active', labelActive === 'qty');
+  el.tabPrice.classList.toggle('active', labelActive === 'price');
+  el.tabQty.classList.toggle('active', labelActive === 'qty');
 }
 
 function renderLabelAll() {
@@ -1317,6 +1321,8 @@ document.querySelectorAll('#label-keypad .key[data-key]').forEach((btn) => {
 
 el.labelPrice.addEventListener('click', () => { labelActive = 'price'; renderLabelInput(); });
 el.labelQty.addEventListener('click', () => { labelActive = 'qty'; renderLabelInput(); });
+el.tabPrice.addEventListener('click', () => { labelActive = 'price'; renderLabelInput(); });
+el.tabQty.addEventListener('click', () => { labelActive = 'qty'; renderLabelInput(); });
 el.labelClear.addEventListener('click', () => labelKeyTap('clear'));
 el.labelUnit.addEventListener('input', () => {
   labelUnit = el.labelUnit.value;
