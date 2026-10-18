@@ -201,6 +201,7 @@ html, body {
   padding: 12px;
 }
 .records-head { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+.check-hint { color: var(--orange); font-weight: 700; }
 
 .records {
   list-style: none;
@@ -728,6 +729,12 @@ hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
   cursor: pointer;
 }
 .field-clear:active { filter: brightness(0.95); }
+/* 单位(p)与清空键统一高度，避免按钮偏矮 */
+.label-unit-field,
+.field-clear {
+  height: 44px;
+  line-height: 1.2;
+}
 /* 价格/数量切换按钮 + 添加 一行 */
 .label-tab-add { display: flex; gap: 10px; }
 .label-toggle {
