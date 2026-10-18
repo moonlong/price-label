@@ -52,12 +52,6 @@ html, body {
   background: var(--blue);
   flex: none;
 }
-.context-bar .c-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-  letter-spacing: 0.08em;
-}
 .context-bar .c-name {
   font-size: 16px;
   font-weight: 600;
