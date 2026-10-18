@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.61.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.61.0';
-import { buildCpcl } from './core/cpcl.js?v=1.61.0';
-import { buildTspl } from './core/tspl.js?v=1.61.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.61.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.61.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.61.0';
-import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.61.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.61.0';
+import { Store } from './core/store.js?v=1.62.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.62.0';
+import { buildCpcl } from './core/cpcl.js?v=1.62.0';
+import { buildTspl } from './core/tspl.js?v=1.62.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.62.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.62.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.62.0';
+import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.62.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.62.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -95,6 +95,7 @@ const el = {
   labelPrinterStatus: $('label-printer-status'),
   labelBatch: $('label-batch'),
   labelBatchCount: $('label-batch-count'),
+  labelCheckHint: $('label-check-hint'),
   labelPrice: $('label-price'),
   labelQty: $('label-qty'),
   labelUnit: $('label-unit'),
@@ -1138,6 +1139,7 @@ let labelPicking = false;
 let labelEditingIndex = null; // 正在编辑的条目下标（null = 新增）
 let labelLocked = true; // 页面锁：防止误触刷新
 let labelSound = true; // 添加提示音开关
+let printVisible = false; // 「打印」按钮是否在可视区
 
 function renderLabelCustomerPick() {
   // 选中的客户被删除后自动清空
@@ -1295,6 +1297,12 @@ function renderLabelAll() {
   renderLabelInput();
   el.labelPrint.textContent = labelBatch.count > 0 ? `打印 ${labelBatch.count} 张` : '打印';
   el.labelAdd.textContent = labelEditingIndex != null ? '更新' : '添加';
+  renderCheckHint();
+}
+
+function renderCheckHint() {
+  // 仅当有记录、且「打印」按钮已滚入可视区时显示
+  el.labelCheckHint.hidden = !(printVisible && labelBatch.count > 0);
 }
 
 function labelKeyTap(key) {
@@ -1428,6 +1436,14 @@ el.labelAdd.addEventListener('click', () => {
 
 el.labelConnect.addEventListener('click', () => labelPrint.connect());
 el.labelPrint.addEventListener('click', doLabelPrint);
+
+// 观察「打印」按钮是否滚入可视区，用于控制「打印前请核对」提示
+if ('IntersectionObserver' in window && el.labelPrint) {
+  new IntersectionObserver((entries) => {
+    printVisible = entries[0].isIntersecting;
+    renderCheckHint();
+  }, { threshold: 0 }).observe(el.labelPrint);
+}
 
 el.labelManage.addEventListener('click', () => {
   renderManageCustomerList();
