@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.53.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.53.0';
-import { buildCpcl } from './core/cpcl.js?v=1.53.0';
-import { buildTspl } from './core/tspl.js?v=1.53.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.53.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.53.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.53.0';
-import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.53.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.53.0';
+import { Store } from './core/store.js?v=1.54.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.54.0';
+import { buildCpcl } from './core/cpcl.js?v=1.54.0';
+import { buildTspl } from './core/tspl.js?v=1.54.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.54.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.54.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.54.0';
+import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.54.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.54.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -1378,8 +1378,7 @@ el.labelAdd.addEventListener('click', () => {
     r = labelBatch.add(labelCustomer.name, labelPrice, labelQty);
     if (!r.ok) return toast(r.error);
   }
-  labelPrice = '';
-  labelQty = '';
+  // 价格/数量保留（当模板），只重置激活项为价格
   labelActive = 'price';
   renderLabelAll();
 });
