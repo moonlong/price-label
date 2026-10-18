@@ -662,6 +662,19 @@ hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
 .label-batch li .num { color: var(--muted); font-size: 12px; min-width: 18px; flex: none; }
 .label-batch li .bname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 600; }
 .label-batch li .btxt { flex: none; color: var(--muted); font-variant-numeric: tabular-nums; }
+.label-batch li .copy {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--blue);
+  font-size: 12px;
+  line-height: 1;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  flex: none;
+  margin-right: 6px; /* 与删除键拉开距离，避免误触 */
+}
+.label-batch li .copy:active { background: #eff6ff; }
 .label-batch li .del {
   border: none;
   background: transparent;

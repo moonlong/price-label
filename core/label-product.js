@@ -67,6 +67,16 @@ export class ProductLabelBatch {
     return { ok: true };
   }
 
+  /** 复制指定条目（客户/价格/数量完全相同），插在原条后面。 */
+  copy(index) {
+    if (!Number.isInteger(index) || index < 0 || index >= this.items.length) return { ok: false, error: '该条不存在' };
+    if (this.items.length >= this.max) return { ok: false, error: `最多 ${this.max} 张` };
+    const src = this.items[index];
+    const item = { name: src.name, price: src.price, qty: src.qty };
+    this.items.splice(index + 1, 0, item);
+    return { ok: true, item };
+  }
+
   clear() {
     this.items = [];
     return { ok: true };

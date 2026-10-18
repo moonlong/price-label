@@ -40,6 +40,22 @@ test('ProductLabelBatch：最多10条、可删、校验', () => {
   assert.equal(b.list().length, 0);
 });
 
+test('ProductLabelBatch：copy 复制同款条目，插在原条后，受上限约束', () => {
+  const b = new ProductLabelBatch(10);
+  b.add('佐藤', 540, '20');
+  b.add('田中', 300, null);
+  const r = b.copy(0);
+  assert.equal(r.ok, true);
+  assert.equal(b.count, 3);
+  // 插在原条后面
+  assert.equal(b.list()[1].name, '佐藤');
+  assert.equal(b.list()[1].price, 540);
+  assert.equal(b.list()[1].qty, '20');
+  // 原第二条后移
+  assert.equal(b.list()[2].name, '田中');
+  assert.equal(b.copy(999).ok, false);
+});
+
 test('computeLayout noDate：不预留日期行，正文可用高度更大', () => {
   const W = mmToDots(40);
   const H = mmToDots(30);

@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.49.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.49.0';
-import { buildCpcl } from './core/cpcl.js?v=1.49.0';
-import { buildTspl } from './core/tspl.js?v=1.49.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.49.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.49.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.49.0';
-import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.49.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.49.0';
+import { Store } from './core/store.js?v=1.50.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.50.0';
+import { buildCpcl } from './core/cpcl.js?v=1.50.0';
+import { buildTspl } from './core/tspl.js?v=1.50.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.50.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.50.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.50.0';
+import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.50.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.50.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -1231,6 +1231,16 @@ function renderLabelBatch() {
     const txt = document.createElement('span');
     txt.className = 'btxt';
     txt.textContent = item.qty ? `${item.price}/${item.qty}${unit}` : String(item.price);
+    const copy = document.createElement('button');
+    copy.className = 'copy';
+    copy.type = 'button';
+    copy.title = '复制此条（客户/价格/数量相同）';
+    copy.textContent = '复制';
+    copy.onclick = () => {
+      const r = labelBatch.copy(i);
+      if (!r.ok) return toast(r.error);
+      renderLabelAll();
+    };
     const del = document.createElement('button');
     del.className = 'del';
     del.type = 'button';
@@ -1240,7 +1250,7 @@ function renderLabelBatch() {
       labelBatch.remove(i);
       renderLabelAll();
     };
-    li.append(num, nm, txt, del);
+    li.append(num, nm, txt, copy, del);
     el.labelBatch.appendChild(li);
   });
 }
