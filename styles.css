@@ -721,6 +721,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
   flex: 0 0 56px;
   padding: 12px 0;
   font-size: 15px;
+  line-height: 1.4; /* 匹配输入框的 CJK 行高，避免偏矮 */
   text-align: center;
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -729,12 +730,6 @@ hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
   cursor: pointer;
 }
 .field-clear:active { filter: brightness(0.95); }
-/* 单位(p)与清空键统一高度，避免按钮偏矮 */
-.label-unit-field,
-.field-clear {
-  height: 44px;
-  line-height: 1.2;
-}
 /* 价格/数量切换按钮 + 添加 一行 */
 .label-tab-add { display: flex; gap: 10px; }
 .label-toggle {
