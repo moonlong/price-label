@@ -716,13 +716,13 @@ hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
 
 /* 商品标签键盘：3 列数字网格 + 底部 00/0/⌫ + 添加宽键 */
 #label-keypad {
-  background: #f8fafc;
-  border: 1px solid var(--line);
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
   border-radius: 14px;
   padding: 12px;
 }
 #label-keypad .key-row { grid-template-columns: repeat(3, 1fr); }
-#label-keypad .key { padding: 16px 0; font-size: 24px; }
+#label-keypad .key { padding: 16px 0; font-size: 24px; touch-action: manipulation; }
 .field-clear {
   flex: 0 0 56px;
   padding: 12px 0;
