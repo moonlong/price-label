@@ -715,6 +715,12 @@ hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
 .label-batch li.editing { background: #eff6ff; border-radius: 6px; }
 
 /* 商品标签键盘：3 列数字网格 + 底部 00/0/⌫ + 添加宽键 */
+#label-keypad {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+}
 #label-keypad .key-row { grid-template-columns: repeat(3, 1fr); }
 #label-keypad .key { padding: 16px 0; font-size: 24px; }
 .field-clear {

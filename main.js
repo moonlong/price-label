@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.62.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.62.0';
-import { buildCpcl } from './core/cpcl.js?v=1.62.0';
-import { buildTspl } from './core/tspl.js?v=1.62.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.62.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.62.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.62.0';
-import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.62.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.62.0';
+import { Store } from './core/store.js?v=1.63.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.63.0';
+import { buildCpcl } from './core/cpcl.js?v=1.63.0';
+import { buildTspl } from './core/tspl.js?v=1.63.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.63.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.63.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.63.0';
+import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.63.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.63.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -1348,8 +1348,33 @@ async function doLabelPrint() {
 }
 
 document.querySelectorAll('#label-keypad .key[data-key]').forEach((btn) => {
+  if (btn.dataset.key === 'back') return; // 退格键单独处理长按
   btn.addEventListener('click', () => labelKeyTap(btn.dataset.key));
 });
+
+// 退格键：短按删一位，长按(500ms)清空当前字段
+(function setupBackLongPress() {
+  const backBtn = document.querySelector('#label-keypad .key[data-key="back"]');
+  if (!backBtn) return;
+  let timer = null;
+  let longPressed = false;
+  backBtn.addEventListener('pointerdown', () => {
+    longPressed = false;
+    timer = setTimeout(() => {
+      longPressed = true;
+      labelKeyTap('clear');
+      if (navigator.vibrate) navigator.vibrate(30);
+    }, 500);
+  });
+  const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
+  backBtn.addEventListener('pointerup', cancel);
+  backBtn.addEventListener('pointercancel', cancel);
+  backBtn.addEventListener('pointerleave', cancel);
+  backBtn.addEventListener('click', () => {
+    if (!longPressed) labelKeyTap('back');
+    longPressed = false;
+  });
+})();
 
 el.labelPrice.addEventListener('click', () => { labelActive = 'price'; renderLabelInput(); });
 el.labelQty.addEventListener('click', () => { labelActive = 'qty'; renderLabelInput(); });
