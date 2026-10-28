@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildProductLabel, ProductLabelBatch } from '../core/label-product.js';
+import { buildProductLabel, buildProductNameLabel, ProductLabelBatch } from '../core/label-product.js';
 import { computeLayout, mmToDots } from '../core/raster.js';
 
 // 近似文字宽度模型，用于无画布环境验证排布。
@@ -15,6 +15,15 @@ test('buildProductLabel：仅价格无数量；价格+数量用 / 分割', () =>
   assert.equal(buildProductLabel('佐藤', 540, null).lines[1].text, '540');
   assert.equal(buildProductLabel('佐藤', 540, '20').lines[1].text, '540/20p');
   assert.equal(buildProductLabel('佐藤', 540, '20', '個').lines[1].text, '540/20個');
+});
+
+test('buildProductNameLabel：仅一行用户名，无价格', () => {
+  const l = buildProductNameLabel('山田太郎');
+  assert.equal(l.lines.length, 1);
+  assert.equal(l.lines[0].role, 'name');
+  assert.equal(l.lines[0].text, '山田太郎');
+  assert.equal(l.price, null);
+  assert.equal(l.qty, null);
 });
 
 test('ProductLabelBatch：最多10条、可删、校验', () => {

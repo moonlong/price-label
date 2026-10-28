@@ -30,6 +30,19 @@ export function buildProductLabel(name, price, qty, unit = 'p') {
   };
 }
 
+/** 仅打印用户名的标签（单行）。 */
+export function buildProductNameLabel(name) {
+  return {
+    kind: 'product',
+    name,
+    price: null,
+    qty: null,
+    unit: '',
+    date: '',
+    lines: [{ role: 'name', text: String(name) }],
+  };
+}
+
 /** 渲染商品标签位图（复用 raster：默认 40×30、无日期）。 */
 export function renderProductLabelBitmap(name, price, qty, unit = 'p', labelSize = { widthMm: 40, heightMm: 30 }, opts = {}) {
   const label = buildProductLabel(name, price, qty, unit);

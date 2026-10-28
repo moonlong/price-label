@@ -175,8 +175,10 @@ export function buildNiimbotCommands(label, labelSize = { widthMm: 40, heightMm:
   const W = mmToDots(labelSize.widthMm || 40);
   const H = mmToDots(labelSize.heightMm || 30);
   // 商品标签排版（日本本土化：四周留白、上下居中、价格略大于客户名）
+  // 仅一行（NameOnly）时用大字号单行布局
+  const singleLine = (label.lines || []).length === 1;
   const productLayout = {
-    fixedSizes: [Math.round(H * 0.19), Math.round(H * 0.26)],
+    fixedSizes: singleLine ? [Math.round(H * 0.30)] : [Math.round(H * 0.19), Math.round(H * 0.26)],
     marginX: Math.round(W * 0.12),
     marginTop: Math.round(H * 0.12),
     marginBottom: Math.round(H * 0.12),

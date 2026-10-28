@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.64.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.64.0';
-import { buildCpcl } from './core/cpcl.js?v=1.64.0';
-import { buildTspl } from './core/tspl.js?v=1.64.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.64.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.64.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.64.0';
-import { buildProductLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.64.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.64.0';
+import { Store } from './core/store.js?v=1.65.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.65.0';
+import { buildCpcl } from './core/cpcl.js?v=1.65.0';
+import { buildTspl } from './core/tspl.js?v=1.65.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.65.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.65.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.65.0';
+import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.65.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.65.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -107,6 +107,7 @@ const el = {
   labelSound: $('label-sound'),
   labelManage: $('label-manage'),
   labelPrint: $('label-print'),
+  labelNameOnly: $('label-name-only'),
 };
 
 let expr = '';
@@ -1140,6 +1141,7 @@ let labelEditingIndex = null; // 正在编辑的条目下标（null = 新增）
 let labelLocked = true; // 页面锁：防止误触刷新
 let labelSound = true; // 添加提示音开关
 let printVisible = false; // 「打印」按钮是否在可视区
+let labelNameOnly = false; // 仅打印用户名（默认关，不持久化）
 
 function renderLabelCustomerPick() {
   // 选中的客户被删除后自动清空
@@ -1326,7 +1328,9 @@ async function doLabelPrint() {
   const printed = labelBatch.count;
   try {
     for (const item of labelBatch.list()) {
-      const label = buildProductLabel(item.name, item.price, item.qty, unit);
+      const label = labelNameOnly
+        ? buildProductNameLabel(item.name)
+        : buildProductLabel(item.name, item.price, item.qty, unit);
       await labelPrint.print(label, {
         labelSize: store.getProductLabel(),
         print: store.getProductPrint(),
@@ -1459,6 +1463,7 @@ el.labelAdd.addEventListener('click', () => {
 
 el.labelConnect.addEventListener('click', () => labelPrint.connect());
 el.labelPrint.addEventListener('click', doLabelPrint);
+el.labelNameOnly.addEventListener('change', () => { labelNameOnly = el.labelNameOnly.checked; });
 
 // 观察「打印」按钮是否滚入可视区，用于控制「打印前请核对」提示
 if ('IntersectionObserver' in window && el.labelPrint) {

@@ -439,6 +439,21 @@ html, body {
 
 /* 底部 */
 .footer { display: flex; justify-content: space-between; align-items: center; }
+.footer-print-group { display: flex; align-items: center; gap: 12px; }
+.name-only-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+.name-only-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--blue);
+}
 
 /* 版本号（不显眼，置于底部） */
 .version {
