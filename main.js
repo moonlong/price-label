@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.65.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.65.0';
-import { buildCpcl } from './core/cpcl.js?v=1.65.0';
-import { buildTspl } from './core/tspl.js?v=1.65.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.65.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.65.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.65.0';
-import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.65.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.65.0';
+import { Store } from './core/store.js?v=1.66.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.66.0';
+import { buildCpcl } from './core/cpcl.js?v=1.66.0';
+import { buildTspl } from './core/tspl.js?v=1.66.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.66.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.66.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.66.0';
+import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.66.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.66.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -1244,7 +1244,7 @@ function renderLabelBatch() {
     nm.textContent = item.name;
     const txt = document.createElement('span');
     txt.className = 'btxt';
-    txt.textContent = item.qty ? `${item.price}/${item.qty}${unit}` : String(item.price);
+    txt.textContent = labelNameOnly ? '' : (item.qty ? `${item.price}/${item.qty}${unit}` : String(item.price));
     const copy = document.createElement('button');
     copy.className = 'copy';
     copy.type = 'button';
@@ -1288,6 +1288,9 @@ function renderLabelInput() {
   el.labelPrice.classList.toggle('active', labelActive === 'price');
   el.labelQty.classList.toggle('active', labelActive === 'qty');
   el.labelToggle.textContent = labelActive === 'price' ? '价格' : '数量';
+  // NameOnly 时价格/数量无需输入，置灰禁用
+  el.labelPrice.disabled = labelNameOnly;
+  el.labelQty.disabled = labelNameOnly;
 }
 
 function renderLabelAll() {
@@ -1324,6 +1327,12 @@ function labelKeyTap(key) {
 
 async function doLabelPrint() {
   if (labelBatch.count === 0) return toast('请先添加标签');
+  // 非 NameOnly 时，若有记录缺少价格则拦截，避免打印出「0」
+  if (!labelNameOnly) {
+    for (const item of labelBatch.list()) {
+      if (!item.price) return toast(`「${item.name}」缺少价格，请补填或开启 NameOnly`);
+    }
+  }
   const unit = labelUnit.trim() || 'p';
   const printed = labelBatch.count;
   try {
@@ -1447,11 +1456,11 @@ el.labelAdd.addEventListener('click', () => {
   if (!labelCustomer) return toast('请先选择客户');
   let r;
   if (labelEditingIndex != null) {
-    r = labelBatch.replace(labelEditingIndex, labelCustomer.name, labelPrice, labelQty);
+    r = labelBatch.replace(labelEditingIndex, labelCustomer.name, labelPrice, labelQty, labelNameOnly);
     if (!r.ok) return toast(r.error);
     labelEditingIndex = null;
   } else {
-    r = labelBatch.add(labelCustomer.name, labelPrice, labelQty);
+    r = labelBatch.add(labelCustomer.name, labelPrice, labelQty, labelNameOnly);
     if (!r.ok) return toast(r.error);
   }
   // 价格/数量保留（当模板），只重置激活项为价格
@@ -1463,7 +1472,11 @@ el.labelAdd.addEventListener('click', () => {
 
 el.labelConnect.addEventListener('click', () => labelPrint.connect());
 el.labelPrint.addEventListener('click', doLabelPrint);
-el.labelNameOnly.addEventListener('change', () => { labelNameOnly = el.labelNameOnly.checked; });
+el.labelNameOnly.addEventListener('change', () => {
+  labelNameOnly = el.labelNameOnly.checked;
+  renderLabelInput(); // 更新价格/数量输入框置灰
+  renderLabelBatch(); // 更新记录列表（NameOnly 只显示名字）
+});
 
 // 观察「打印」按钮是否滚入可视区，用于控制「打印前请核对」提示
 if ('IntersectionObserver' in window && el.labelPrint) {

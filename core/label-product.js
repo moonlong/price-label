@@ -56,17 +56,22 @@ export class ProductLabelBatch {
     this.items = [];
   }
 
-  /** 添加一条。name 必填；price 必填正整数；qty 可空，非空必须为正整数。 */
-  add(name, price, qty) {
+  /** 添加一条。name 必填；price 必填正整数；qty 可空，非空必须为正整数。nameOnly 时价格/数量可空（存 0/null）。 */
+  add(name, price, qty, nameOnly = false) {
     const nm = String(name || '').trim();
     if (!nm) return { ok: false, error: '请先选择客户' };
-    const p = Number(price);
-    if (!Number.isInteger(p) || p <= 0) return { ok: false, error: '价格必须为正整数' };
+    let p = 0;
     let q = null;
-    if (qty != null && String(qty).trim() !== '') {
-      const n = Number(qty);
-      if (!Number.isInteger(n) || n <= 0) return { ok: false, error: '数量必须为正整数' };
-      q = String(n);
+    if (nameOnly) {
+      p = Number(price) || 0;
+    } else {
+      p = Number(price);
+      if (!Number.isInteger(p) || p <= 0) return { ok: false, error: '价格必须为正整数' };
+      if (qty != null && String(qty).trim() !== '') {
+        const n = Number(qty);
+        if (!Number.isInteger(n) || n <= 0) return { ok: false, error: '数量必须为正整数' };
+        q = String(n);
+      }
     }
     if (this.items.length >= this.max) return { ok: false, error: `最多 ${this.max} 张` };
     const item = { name: nm, price: p, qty: q };
@@ -91,17 +96,22 @@ export class ProductLabelBatch {
   }
 
   /** 更新指定条目的内容（用于编辑）。 */
-  replace(index, name, price, qty) {
+  replace(index, name, price, qty, nameOnly = false) {
     if (!Number.isInteger(index) || index < 0 || index >= this.items.length) return { ok: false, error: '该条不存在' };
     const nm = String(name || '').trim();
     if (!nm) return { ok: false, error: '请先选择客户' };
-    const p = Number(price);
-    if (!Number.isInteger(p) || p <= 0) return { ok: false, error: '价格必须为正整数' };
+    let p = 0;
     let q = null;
-    if (qty != null && String(qty).trim() !== '') {
-      const n = Number(qty);
-      if (!Number.isInteger(n) || n <= 0) return { ok: false, error: '数量必须为正整数' };
-      q = String(n);
+    if (nameOnly) {
+      p = Number(price) || 0;
+    } else {
+      p = Number(price);
+      if (!Number.isInteger(p) || p <= 0) return { ok: false, error: '价格必须为正整数' };
+      if (qty != null && String(qty).trim() !== '') {
+        const n = Number(qty);
+        if (!Number.isInteger(n) || n <= 0) return { ok: false, error: '数量必须为正整数' };
+        q = String(n);
+      }
     }
     this.items[index] = { name: nm, price: p, qty: q };
     return { ok: true };

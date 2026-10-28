@@ -679,6 +679,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
   font-variant-numeric: tabular-nums;
 }
 .label-field.active { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
+.label-field:disabled { opacity: 0.55; background: #f1f5f9; }
 .label-unit-field { flex: 0 0 56px; font-size: 15px; }
 
 /* 商品标签：批量列表 */

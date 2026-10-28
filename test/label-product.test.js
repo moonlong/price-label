@@ -49,6 +49,19 @@ test('ProductLabelBatch：最多10条、可删、校验', () => {
   assert.equal(b.list().length, 0);
 });
 
+test('ProductLabelBatch：nameOnly 时价格/数量可空，非 nameOnly 保持必填', () => {
+  const b = new ProductLabelBatch(10);
+  // nameOnly：价格空可添加，存 0、数量 null
+  assert.equal(b.add('佐藤', '', null, true).ok, true);
+  assert.equal(b.list()[0].price, 0);
+  assert.equal(b.list()[0].qty, null);
+  // 非 nameOnly：价格空仍拒绝（保持原设计）
+  assert.equal(b.add('田中', '', null, false).ok, false);
+  assert.equal(b.replace(0, '鈴木', '', null, true).ok, true);
+  assert.equal(b.list()[0].name, '鈴木');
+  assert.equal(b.list()[0].price, 0);
+});
+
 test('ProductLabelBatch：copy 复制同款条目，插在原条后，受上限约束', () => {
   const b = new ProductLabelBatch(10);
   b.add('佐藤', 540, '20');
