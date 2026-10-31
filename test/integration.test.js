@@ -68,7 +68,7 @@ test('完整结算流程（客户用例：NOE，三枚目）', () => {
   // 补打合计标签
   const rt = s.reprintTotal();
   assert.equal(rt.ok, true);
-  assert.equal(labelToPlainText(rt.label), 'NOE様\n3枚目: 1,234円\n合計: 21,234円\n' + t.lastOrder.date);
+  assert.equal(labelToPlainText(rt.label), 'NOE様\n3枚目: 1,234円\n合計: 21,234円\n' + t.lastOrder.date + ' P');
 });
 
 test('单组场景：一组直接附合计结束', () => {

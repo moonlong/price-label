@@ -16,7 +16,7 @@ export const MAX_GROUP = 9;
 export const MAX_ITEMS_NO_VERIFY = 3;
 
 function emptySession() {
-  return { customerNo: null, group: 1, groups: {}, restoredTotal: null };
+  return { customerNo: null, group: 1, groups: {}, restoredTotal: null, billType: 'normal' };
 }
 
 export class Store {
@@ -65,6 +65,7 @@ export class Store {
             group: Number.isInteger(parsed.group) && parsed.group >= 1 && parsed.group <= MAX_GROUP ? parsed.group : 1,
             groups: parsed.groups,
             restoredTotal: Number.isFinite(parsed.restoredTotal) ? parsed.restoredTotal : null,
+            billType: parsed.billType === 'special' ? 'special' : 'normal',
           };
         }
       } catch { /* ignore */ }
@@ -233,6 +234,15 @@ export class Store {
 
   currentGroup() { return this.session.group; }
 
+  /** 切换账单类型：普货(normal) ↔ 特货(special)。 */
+  toggleBillType() {
+    this.session.billType = this.session.billType === 'special' ? 'normal' : 'special';
+    this._persist();
+    return this.session.billType;
+  }
+
+  billType() { return this.session.billType === 'special' ? 'special' : 'normal'; }
+
   addEntry(expr) {
     const g = this._ensureGroup(this.session.group);
     const ev = evaluateExpression(expr);
@@ -347,7 +357,7 @@ export class Store {
       if (subtotal === prev) {
         g.verifyBaseline = null;
         this._persist();
-        return { ok: true, action: 'done', groupNo, groupTotal: subtotal, label: buildGroupLabel(this.customerName(), groupNo, subtotal) };
+        return { ok: true, action: 'done', groupNo, groupTotal: subtotal, label: buildGroupLabel(this.customerName(), groupNo, subtotal, formatDate(), { billType: this.billType() }) };
       }
       const diff = subtotal - prev;
       g.verifyBaseline = subtotal;
@@ -412,7 +422,7 @@ export class Store {
     const counted = g && (g.status === 'done' || g.status === 'dirty' || g.status === 'pending');
     const total = this.grandTotal() + (counted ? 0 : groupTotal);
     const groupCount = this.summary().length + (counted ? 0 : 1);
-    return buildTotalLabel(this.customerName(), groupNo, groupTotal, total, formatDate(), { singleGroup: groupCount === 1, deduction });
+    return buildTotalLabel(this.customerName(), groupNo, groupTotal, total, formatDate(), { singleGroup: groupCount === 1, deduction, billType: this.billType() });
   }
 
   /** 合计打印：标记当前组完成、归档最近一单、清空、追加历史（含组明细）。deduction 可选。 */
@@ -421,13 +431,14 @@ export class Store {
     const total = this.grandTotal();
     const customerName = this.customerName();
     const groupSummary = this.summary().map((s) => ({ group: s.group, subtotal: s.subtotal }));
-    const label = buildTotalLabel(customerName, groupNo, groupTotal, total, formatDate(), { singleGroup: groupSummary.length === 1, deduction });
+    const label = buildTotalLabel(customerName, groupNo, groupTotal, total, formatDate(), { singleGroup: groupSummary.length === 1, deduction, billType: this.billType() });
     this.lastOrder = {
       customerNo: this.session.customerNo,
       customerName,
       groups: groupSummary,
       grandTotal: total,
       date: formatDate(),
+      billType: this.billType(),
     };
     this.history.push({
       date: formatDate(),
@@ -436,6 +447,7 @@ export class Store {
       customerNo: this.session.customerNo,
       total,
       groups: groupSummary,
+      billType: this.billType(),
       ts: Date.now(),
     });
     this.session = emptySession(); // 取消选中客户，回到默认
@@ -481,6 +493,7 @@ export class Store {
     }
     this.session.group = minGroup <= MAX_GROUP ? minGroup : 1;
     this.session.restoredTotal = Number(h.total) || 0;
+    this.session.billType = h.billType === 'special' ? 'special' : 'normal';
     this._persist();
     return { ok: true, customerName: h.customer };
   }
@@ -529,7 +542,7 @@ export class Store {
   reprintGroup(n) {
     const g = this._group(n);
     if (!g || (g.status !== 'done' && g.status !== 'pending')) return { ok: false, error: '该枚目没有可补打的内容' };
-    return { ok: true, groupNo: n, groupTotal: this._subtotal(g), label: buildGroupLabel(this.customerName(), n, this._subtotal(g)), wasPending: g.status === 'pending' };
+    return { ok: true, groupNo: n, groupTotal: this._subtotal(g), label: buildGroupLabel(this.customerName(), n, this._subtotal(g), formatDate(), { billType: this.billType() }), wasPending: g.status === 'pending' };
   }
 
   /** 该枚目是否为「最后一组」（已打印/需重打/需打印中的最大编号）。 */
@@ -548,6 +561,6 @@ export class Store {
     const last = this.lastOrder.groups[this.lastOrder.groups.length - 1];
     const groupNo = last ? last.group : 1;
     const groupTotal = last ? last.subtotal : 0;
-    return { ok: true, label: buildTotalLabel(customerName, groupNo, groupTotal, grandTotal, this.lastOrder.date) };
+    return { ok: true, label: buildTotalLabel(customerName, groupNo, groupTotal, grandTotal, this.lastOrder.date, { billType: this.lastOrder.billType || 'normal' }) };
   }
 }

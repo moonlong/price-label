@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.66.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.66.0';
-import { buildCpcl } from './core/cpcl.js?v=1.66.0';
-import { buildTspl } from './core/tspl.js?v=1.66.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.66.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.66.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.66.0';
-import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.66.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.66.0';
+import { Store } from './core/store.js?v=1.67.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.67.0';
+import { buildCpcl } from './core/cpcl.js?v=1.67.0';
+import { buildTspl } from './core/tspl.js?v=1.67.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.67.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.67.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.67.0';
+import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.67.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.67.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -33,6 +33,10 @@ const el = {
   verifyMsg: $('verify-msg'),
   verifyFill: $('verify-fill'),
   contextBar: $('context-bar'),
+  contextName: $('context-name'),
+  billType: $('bill-type'),
+  contextGroup: $('context-group'),
+  settleSound: $('settle-sound'),
   summary: $('summary'),
   grandTotal: $('grand-total'),
   totalWarning: $('total-warning'),
@@ -116,6 +120,7 @@ let verifyNotice = null; // 核对区持久文案（"已记录…"/"不一致…
 let printContext = null; // { mode, groupNo, groupTotal, groupLabel, isTotal }
 let customerSearch = ''; // 客户搜索词
 let picking = false; // 是否处于「展开搜索/重选」状态
+let settleSound = false; // 计入提示音开关（默认静音）
 
 function toast(msg, duration = 2200) {
   el.toast.textContent = msg;
@@ -422,7 +427,13 @@ function scrollToKeypad() {
 function renderContext() {
   const name = store.customerName();
   const group = store.currentGroup();
-  el.contextBar.textContent = name ? `🧾 ${name} · ${group}枚目` : '🧾 未选择客户';
+  const bt = store.billType();
+  el.contextName.textContent = name ? `🧾 ${name}` : '🧾 未选择客户';
+  el.contextName.classList.toggle('empty', !name);
+  el.billType.hidden = !name;
+  el.billType.textContent = bt === 'special' ? '特货' : '普货';
+  el.billType.classList.toggle('special', bt === 'special');
+  el.contextGroup.textContent = name ? `· ${group}枚目` : '';
 }
 
 function renderAll() {
@@ -839,6 +850,23 @@ document.querySelectorAll('#keypad .key[data-key]').forEach((btn) => {
   btn.addEventListener('click', () => keyTap(btn.dataset.key));
 });
 
+// 账单类型切换：普货 ↔ 特货
+el.billType.addEventListener('click', () => {
+  store.toggleBillType();
+  renderContext();
+});
+
+// 计入提示音开关（默认静音）
+function renderSettleSound() {
+  el.settleSound.textContent = settleSound ? '🔊' : '🔇';
+  el.settleSound.classList.toggle('muted', !settleSound);
+}
+el.settleSound.addEventListener('click', () => {
+  settleSound = !settleSound;
+  renderSettleSound();
+});
+renderSettleSound();
+
 el.accumulate.addEventListener('click', () => {
   if (store.session.customerNo == null) return toast('请先选择客户');
   verifyNotice = null;
@@ -846,6 +874,7 @@ el.accumulate.addEventListener('click', () => {
   if (!res.ok) return toast(res.error);
   expr = '';
   renderAll();
+  beep(settleSound);
 });
 
 el.undo.addEventListener('click', () => {
@@ -1083,10 +1112,13 @@ function renderHistory() {
     const c = document.createElement('span');
     c.className = 'hcust';
     c.textContent = h.customer;
+    const bt = document.createElement('span');
+    bt.className = 'htype' + (h.billType === 'special' ? ' special' : '');
+    bt.textContent = h.billType === 'special' ? '特货' : '普货';
     const t = document.createElement('span');
     t.className = 'htotal';
     t.textContent = `${h.total}円`;
-    li.append(d, c, t);
+    li.append(d, c, bt, t);
     if (h.groups && h.groups.length > 0) {
       const btn = document.createElement('button');
       btn.className = 'restore-btn';
@@ -1419,8 +1451,8 @@ renderLabelLock();
 
 // 添加成功反馈：短提示音 + 按钮闪绿
 let audioCtx = null;
-function beep() {
-  if (!labelSound) return;
+function beep(enabled = true) {
+  if (!enabled) return;
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
@@ -1467,7 +1499,7 @@ el.labelAdd.addEventListener('click', () => {
   labelActive = 'price';
   renderLabelAll();
   flashAddButton();
-  beep();
+  beep(labelSound);
 });
 
 el.labelConnect.addEventListener('click', () => labelPrint.connect());

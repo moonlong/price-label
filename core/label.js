@@ -28,14 +28,23 @@ export function formatTime(d = new Date()) {
   return `${h}:${m}`;
 }
 
+/** 账单类型 → 便签日期旁的小标记：普货 P、特货 W。 */
+function billMark(billType) {
+  if (billType === 'special') return 'W';
+  if (billType === 'normal') return 'P';
+  return '';
+}
+
 /** 本组便签：客户名 + N枚目: 价格（无合计行）。 */
-export function buildGroupLabel(customerName, groupNo, groupTotal, date = formatDate()) {
+export function buildGroupLabel(customerName, groupNo, groupTotal, date = formatDate(), opts = {}) {
+  const mark = billMark(opts.billType);
   return {
     kind: 'group',
     customerName,
     groupNo,
     groupTotal,
-    date,
+    date: mark ? `${date} ${mark}` : date,
+    billType: opts.billType || null,
     lines: [
       { role: 'customer', text: honorific(customerName) },
       { role: 'group', text: `${groupNo}枚目: ${formatMoney(groupTotal)}円` },
@@ -77,7 +86,8 @@ export function buildTotalLabel(customerName, groupNo, groupTotal, grandTotal, d
     groupNo,
     groupTotal,
     grandTotal,
-    date,
+    date: billMark(opts.billType) ? `${date} ${billMark(opts.billType)}` : date,
+    billType: opts.billType || null,
     singleGroup: !!opts.singleGroup,
     deduction,
     net,

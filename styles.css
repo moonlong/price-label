@@ -58,6 +58,22 @@ html, body {
   color: var(--text);
 }
 .context-bar .c-name.empty { color: var(--muted); font-weight: 500; }
+.context-bar .c-group { font-size: 13px; color: var(--muted); font-weight: 500; }
+.context-bar .bill-type {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--muted);
+  cursor: pointer;
+}
+.context-bar .bill-type.special {
+  border-color: #fdba74;
+  background: #ffedd5;
+  color: #9a3412;
+}
 
 /* 客户搜索框 */
 .customer-search {
@@ -610,6 +626,16 @@ hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
 }
 .history-list li .hdate { color: var(--muted); }
 .history-list li .hcust { font-weight: 600; }
+.history-list li .htype {
+  flex: none;
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-weight: 500;
+}
+.history-list li .htype.special { border-color: #fdba74; background: #ffedd5; color: #9a3412; }
 .history-list li .htotal { margin-left: auto; font-weight: 700; }
 .history-list li .restore-btn { margin-left: 6px; border: 1px solid var(--blue); background: #eff6ff; color: var(--blue); border-radius: 6px; font-size: 12px; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
 .history-list .empty { color: var(--muted); justify-content: center; cursor: default; }
