@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.67.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.67.0';
-import { buildCpcl } from './core/cpcl.js?v=1.67.0';
-import { buildTspl } from './core/tspl.js?v=1.67.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.67.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.67.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.67.0';
-import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.67.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.67.0';
+import { Store } from './core/store.js?v=1.68.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.68.0';
+import { buildCpcl } from './core/cpcl.js?v=1.68.0';
+import { buildTspl } from './core/tspl.js?v=1.68.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.68.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.68.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.68.0';
+import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.68.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.68.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -874,7 +874,7 @@ el.accumulate.addEventListener('click', () => {
   if (!res.ok) return toast(res.error);
   expr = '';
   renderAll();
-  beep(settleSound);
+  if (settleSound) settleBeep();
 });
 
 el.undo.addEventListener('click', () => {
@@ -1468,6 +1468,33 @@ function beep(enabled = true) {
     osc.start();
     gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
     osc.stop(audioCtx.currentTime + 0.12);
+  } catch (e) { /* 忽略 */ }
+}
+
+// 「计入」专用提示音：双音上扬「叮-咚」，比 beep 更清晰、更易辨认。
+// 用于 A 读价 / B 输入的协作场景：B 计入后 A 听到此音即继续读下一个。
+function settleBeep() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!audioCtx) audioCtx = new AC();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const t0 = audioCtx.currentTime;
+    playNote(880, t0, 0.09);
+    playNote(1318.5, t0 + 0.1, 0.18);
+    function playNote(freq, start, dur) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.25, start + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(start);
+      osc.stop(start + dur + 0.03);
+    }
   } catch (e) { /* 忽略 */ }
 }
 function flashAddButton() {
