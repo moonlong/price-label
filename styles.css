@@ -68,21 +68,23 @@ html, body {
 .context-bar .bill-seg {
   display: inline-flex;
   flex: none;
-  border: 1px solid var(--line);
+  border: 2px solid #94a3b8;
   border-radius: 999px;
   overflow: hidden;
-  background: #f1f5f9;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
 }
 .context-bar .bill-seg .seg {
   border: none;
   background: transparent;
-  color: var(--muted);
+  color: #475569;
   font-size: 13px;
-  font-weight: 600;
-  padding: 5px 14px;
+  font-weight: 700;
+  padding: 5px 16px;
   cursor: pointer;
   line-height: 1.2;
 }
+.context-bar .bill-seg .seg:active { filter: brightness(0.95); }
 .context-bar .bill-seg .seg.active[data-type="normal"] {
   background: var(--blue);
   color: #fff;
@@ -517,20 +519,21 @@ html, body {
 .dialog.wide { width: min(94vw, 480px); }
 .dialog::backdrop { background: rgba(15, 23, 42, 0.5); }
 .dialog-title { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
-/* 打印预览里的醒目类型徽标（普货/特货） */
+/* 打印预览里的醒目类型徽标（普货/特货），与上下文栏分段控件保持一致 */
 .print-type {
   display: inline-block;
   align-self: flex-start;
   margin: 0 0 10px;
   font-size: 14px;
   font-weight: 700;
-  padding: 4px 14px;
+  padding: 5px 16px;
   border-radius: 999px;
-  border: 1px solid var(--line);
-  color: var(--muted);
-  background: var(--card);
+  border: 2px solid #94a3b8;
+  background: var(--blue);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
 }
-.print-type.special { border-color: #fdba74; background: #ffedd5; color: #9a3412; }
+.print-type.special { background: #ea580c; }
 .dialog-body { font-size: 15px; color: var(--text); margin-bottom: 12px; }
 .dialog-actions { display: flex; gap: 10px; justify-content: flex-end; }
 .dialog-actions.stack { flex-direction: column; }
