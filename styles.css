@@ -68,11 +68,11 @@ html, body {
 .context-bar .bill-seg {
   display: inline-flex;
   flex: none;
-  border: 2px solid #94a3b8;
+  border: 1.5px solid #cbd5e1;
   border-radius: 999px;
   overflow: hidden;
   background: #fff;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 .context-bar .bill-seg .seg {
   border: none;
@@ -528,10 +528,10 @@ html, body {
   font-weight: 700;
   padding: 5px 16px;
   border-radius: 999px;
-  border: 2px solid #94a3b8;
+  border: 1.5px solid #cbd5e1;
   background: var(--blue);
   color: #fff;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 .print-type.special { background: #ea580c; }
 .dialog-body { font-size: 15px; color: var(--text); margin-bottom: 12px; }
