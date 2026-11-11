@@ -426,3 +426,28 @@ test('账单类型：默认普货、可切换特货、归档到历史并体现�
   // 补打合计也带 W
   assert.match(s.reprintTotal().label.date, /W$/);
 });
+
+test('本组结束（普通路径）标签同样带 P/W 标记', () => {
+  const s = fresh(2);
+  s.setGroup(1);
+  s.addEntry('1000');
+  const r = s.finishGroup();
+  assert.equal(r.ok, true);
+  assert.equal(r.action, 'done');
+  assert.match(r.label.date, /P$/); // 默认普货 → P
+  s.toggleBillType(); // 特货
+  s.setGroup(2);
+  s.addEntry('2000');
+  const r2 = s.finishGroup();
+  assert.equal(r2.ok, true);
+  assert.match(r2.label.date, /W$/); // 特货 → W
+});
+
+test('lastSettledGroup：返回最大已结算枚目', () => {
+  const s = fresh(2);
+  s.setGroup(1); s.addEntry('100'); s.finishGroup(); s.commitGroupWithoutPrint(1);
+  s.setGroup(3); s.addEntry('300'); s.finishGroup(); s.commitGroupWithoutPrint(3);
+  assert.equal(s.lastSettledGroup(), 3);
+  assert.equal(s.isLastSettledGroup(3), true);
+  assert.equal(s.isLastSettledGroup(1), false);
+});

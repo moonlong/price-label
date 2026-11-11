@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.68.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.68.0';
-import { buildCpcl } from './core/cpcl.js?v=1.68.0';
-import { buildTspl } from './core/tspl.js?v=1.68.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.68.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.68.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.68.0';
-import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.68.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.68.0';
+import { Store } from './core/store.js?v=1.69.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.69.0';
+import { buildCpcl } from './core/cpcl.js?v=1.69.0';
+import { buildTspl } from './core/tspl.js?v=1.69.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.69.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.69.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.69.0';
+import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.69.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.69.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -44,6 +44,7 @@ const el = {
   history: $('history'),
   clear: $('clear'),
   dlgPrint: $('dlg-print'),
+  printType: $('print-type'),
   printPreview: $('print-preview'),
   printRecords: $('print-records'),
   printVerified: $('print-verified'),
@@ -668,7 +669,14 @@ function renderSummary() {
 function renderGrandTotal() {
   el.grandTotal.textContent = `${formatMoney(store.grandTotal())}円`;
   const restored = store.session.restoredTotal;
-  el.totalWarning.hidden = !(restored != null && store.grandTotal() !== restored);
+  const stale = restored != null && store.grandTotal() !== restored;
+  if (stale) {
+    const last = store.lastSettledGroup();
+    el.totalWarning.textContent = last
+      ? `⚠ 合计已变更，请重打 ${last}枚目（附合计）`
+      : '⚠ 合计已变更，需重新打印最后一组';
+  }
+  el.totalWarning.hidden = !stale;
 }
 
 function renderInput() {
@@ -699,6 +707,11 @@ function resetDeductionUI() {
 function renderPrintPreview() {
   el.printPreview.innerHTML = '';
   if (!printContext) return;
+  // 醒目显示本单类型（普货/特货）
+  const bt = store.billType();
+  el.printType.hidden = false;
+  el.printType.textContent = bt === 'special' ? '特货' : '普货';
+  el.printType.classList.toggle('special', bt === 'special');
   let label;
   if (printContext.isTotal) {
     label = store.totalLabel(printContext.groupNo, printContext.groupTotal, printContext.deduction);
@@ -717,6 +730,14 @@ function renderPrintPreview() {
   el.printWarning.hidden = !printContext.isTotal;
 }
 
+// 打印了非最后一组后，若合计已过时则明确提醒重打最后一组（附合计）
+function warnStaleTotal() {
+  const restored = store.session.restoredTotal;
+  if (restored == null || store.grandTotal() === restored) return;
+  const last = store.lastSettledGroup();
+  if (last) toast(`合计已变更，请重打 ${last}枚目（附合计）`, 4000);
+}
+
 async function onPrintOk() {
   // 补打「本组」：只打印；若该组原为「需打印」，补打后标记为已打印
   if (printContext.mode === 'reprint' && !printContext.isTotal) {
@@ -724,6 +745,7 @@ async function onPrintOk() {
     await doPrint(printContext.groupLabel);
     if (printContext.wasPending) store.markPrinted(printContext.groupNo);
     renderAll();
+    warnStaleTotal();
     return;
   }
   // 其余两种情况都算「合计」并完成本单：
@@ -751,6 +773,7 @@ async function onPrintOk() {
   await doPrint(label);
   if (printContext.isTotal) toast(`${doneName} 结算已完成`, 3500);
   renderAll();
+  if (!printContext.isTotal) warnStaleTotal();
 }
 
 function renderPrintRecords(verified) {
@@ -847,8 +870,32 @@ function keyTap(key) {
 }
 
 document.querySelectorAll('#keypad .key[data-key]').forEach((btn) => {
+  if (btn.dataset.key === 'back') return; // 退格键单独处理长按
   btn.addEventListener('click', () => keyTap(btn.dataset.key));
 });
+
+// 结算页退格键：短按删一位，长按(500ms)清空当前表达式
+(function setupSettleBackLongPress() {
+  const backBtn = document.querySelector('#keypad .key[data-key="back"]');
+  if (!backBtn) return;
+  let timer = null;
+  let longPressed = false;
+  backBtn.addEventListener('pointerdown', () => {
+    longPressed = false;
+    timer = setTimeout(() => {
+      longPressed = true;
+      expr = '';
+      renderInput();
+    }, 500);
+  });
+  const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
+  backBtn.addEventListener('pointerup', cancel);
+  backBtn.addEventListener('pointercancel', cancel);
+  backBtn.addEventListener('click', () => {
+    if (!longPressed) keyTap('back');
+    longPressed = false;
+  });
+})();
 
 // 账单类型切换：普货 ↔ 特货
 el.billType.addEventListener('click', () => {

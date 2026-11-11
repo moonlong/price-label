@@ -380,7 +380,7 @@ export class Store {
       return { ok: true, action: 'reenter', subtotal, baseline: subtotal, message: '已记录，请再次录入核对' };
     }
 
-    return { ok: true, action: 'done', groupNo, groupTotal: subtotal, label: buildGroupLabel(this.customerName(), groupNo, subtotal) };
+    return { ok: true, action: 'done', groupNo, groupTotal: subtotal, label: buildGroupLabel(this.customerName(), groupNo, subtotal, formatDate(), { billType: this.billType() }) };
   }
 
   /** 标记该枚目为已打印，并推进到下一枚目（在打印确认后调用）。 */
@@ -543,6 +543,16 @@ export class Store {
     const g = this._group(n);
     if (!g || (g.status !== 'done' && g.status !== 'pending')) return { ok: false, error: '该枚目没有可补打的内容' };
     return { ok: true, groupNo: n, groupTotal: this._subtotal(g), label: buildGroupLabel(this.customerName(), n, this._subtotal(g), formatDate(), { billType: this.billType() }), wasPending: g.status === 'pending' };
+  }
+
+  /** 最后一组（已打印/需重打/需打印中的最大编号）；没有则返回 null。 */
+  lastSettledGroup() {
+    let max = null;
+    for (let m = 1; m <= MAX_GROUP; m++) {
+      const g = this._group(m);
+      if (g && (g.status === 'done' || g.status === 'dirty' || g.status === 'pending')) max = m;
+    }
+    return max;
   }
 
   /** 该枚目是否为「最后一组」（已打印/需重打/需打印中的最大编号）。 */
