@@ -241,6 +241,13 @@ export class Store {
     return this.session.billType;
   }
 
+  /** 显式设置账单类型：'normal' | 'special'。 */
+  setBillType(type) {
+    this.session.billType = type === 'special' ? 'special' : 'normal';
+    this._persist();
+    return this.session.billType;
+  }
+
   billType() { return this.session.billType === 'special' ? 'special' : 'normal'; }
 
   addEntry(expr) {

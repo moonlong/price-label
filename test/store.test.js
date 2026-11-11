@@ -415,6 +415,8 @@ test('账单类型：默认普货、可切换特货、归档到历史并体现�
   assert.equal(s.billType(), 'normal'); // 默认普货
   assert.equal(s.toggleBillType(), 'special'); // 切到特货
   assert.equal(s.billType(), 'special');
+  assert.equal(s.setBillType('normal'), 'normal'); // 显式设置
+  assert.equal(s.setBillType('special'), 'special');
   s.setGroup(1);
   s.addEntry('1000');
   const r = s.finalizeTotal(1, 1000);

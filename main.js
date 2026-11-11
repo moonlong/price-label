@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.69.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.69.0';
-import { buildCpcl } from './core/cpcl.js?v=1.69.0';
-import { buildTspl } from './core/tspl.js?v=1.69.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.69.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.69.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.69.0';
-import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.69.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.69.0';
+import { Store } from './core/store.js?v=1.70.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.70.0';
+import { buildCpcl } from './core/cpcl.js?v=1.70.0';
+import { buildTspl } from './core/tspl.js?v=1.70.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.70.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.70.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.70.0';
+import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.70.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.70.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -34,7 +34,7 @@ const el = {
   verifyFill: $('verify-fill'),
   contextBar: $('context-bar'),
   contextName: $('context-name'),
-  billType: $('bill-type'),
+  billSeg: $('bill-seg'),
   contextGroup: $('context-group'),
   settleSound: $('settle-sound'),
   summary: $('summary'),
@@ -431,9 +431,10 @@ function renderContext() {
   const bt = store.billType();
   el.contextName.textContent = name ? `🧾 ${name}` : '🧾 未选择客户';
   el.contextName.classList.toggle('empty', !name);
-  el.billType.hidden = !name;
-  el.billType.textContent = bt === 'special' ? '特货' : '普货';
-  el.billType.classList.toggle('special', bt === 'special');
+  el.billSeg.hidden = !name;
+  el.billSeg.querySelectorAll('.seg').forEach((b) => {
+    b.classList.toggle('active', b.dataset.type === bt);
+  });
   el.contextGroup.textContent = name ? `· ${group}枚目` : '';
 }
 
@@ -897,9 +898,13 @@ document.querySelectorAll('#keypad .key[data-key]').forEach((btn) => {
   });
 })();
 
-// 账单类型切换：普货 ↔ 特货
-el.billType.addEventListener('click', () => {
-  store.toggleBillType();
+// 账单类型切换：普货 / 特货（分段选择器）
+el.billSeg.addEventListener('click', (e) => {
+  const btn = e.target.closest('.seg');
+  if (!btn) return;
+  const type = btn.dataset.type;
+  if (store.billType() === type) return;
+  store.setBillType(type);
   renderContext();
 });
 
