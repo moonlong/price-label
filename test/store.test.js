@@ -498,3 +498,27 @@ test('补打某枚目用该枚目自己的类型；可在弹框里改', () => {
   s.setGroupBillType(1, 'special');
   assert.match(s.reprintGroup(1).label.date, /W$/); // 改后变特货
 });
+
+test('需重打(dirty)组可以重打，打印后转为已打印（修复“没有打印按钮”）', () => {
+  const s = fresh(2);
+  s.setGroup(1); s.addEntry('1000'); s.commitGroup(1);
+  s.setBillType('special'); s.setGroup(2); s.addEntry('2000'); s.commitGroup(2);
+  s.finalizeTotal(2, 2000);
+  s.restoreOrder(s.history.length - 1);
+  // 组2 改金额 → 需重打
+  s.setGroup(2);
+  s.removeEntry(2, 0);
+  s.addEntry('1500');
+  assert.equal(s.summary().find((x) => x.group === 2).status, 'dirty');
+  // 可以重打
+  const rp = s.reprintGroup(2);
+  assert.equal(rp.ok, true);
+  assert.equal(rp.wasDirty, true);
+  assert.match(rp.label.date, /W$/);
+  // 打印后转为已打印
+  assert.equal(s.markPrinted(2).ok, true);
+  assert.equal(s.summary().find((x) => x.group === 2).status, 'done');
+  // 空组拒绝重打
+  s.removeEntry(2, 0);
+  assert.equal(s.reprintGroup(2).ok, false);
+});

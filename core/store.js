@@ -439,11 +439,14 @@ export class Store {
     return { ok: true };
   }
 
-  /** 补打后标记为已打印。 */
-  markPrinted(groupNo) {
+  /** 补打/重打后标记为已打印（同步 committedCount，避免后续「追加条数」算错）。 */
+  markPrinted(groupNo, billType = null) {
     const g = this._group(groupNo);
     if (!g) return { ok: false, error: '该枚目不存在' };
     g.status = 'done';
+    g.verifyBaseline = null;
+    g.committedCount = g.entries.length;
+    if (billType === 'special' || billType === 'normal') g.billType = billType;
     this._persist();
     return { ok: true };
   }
@@ -577,9 +580,10 @@ export class Store {
 
   reprintGroup(n, billType = null) {
     const g = this._group(n);
-    if (!g || (g.status !== 'done' && g.status !== 'pending')) return { ok: false, error: '该枚目没有可补打的内容' };
+    if (!g || (g.status !== 'done' && g.status !== 'pending' && g.status !== 'dirty')) return { ok: false, error: '该枚目没有可补打的内容' };
+    if (!g.entries.length) return { ok: false, error: '该枚目没有金额，无法打印' };
     const bt = billType === 'special' || billType === 'normal' ? billType : this.groupBillType(n);
-    return { ok: true, groupNo: n, groupTotal: this._subtotal(g), label: buildGroupLabel(this.customerName(), n, this._subtotal(g), formatDate(), { billType: bt }), wasPending: g.status === 'pending' };
+    return { ok: true, groupNo: n, groupTotal: this._subtotal(g), label: buildGroupLabel(this.customerName(), n, this._subtotal(g), formatDate(), { billType: bt }), wasPending: g.status === 'pending', wasDirty: g.status === 'dirty' };
   }
 
   /** 用指定类型重建某枚目的标签（打印弹框里改类型时用）。 */

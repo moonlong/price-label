@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.73.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.73.0';
-import { buildCpcl } from './core/cpcl.js?v=1.73.0';
-import { buildTspl } from './core/tspl.js?v=1.73.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.73.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.73.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.73.0';
-import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.73.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.73.0';
+import { Store } from './core/store.js?v=1.74.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.74.0';
+import { buildCpcl } from './core/cpcl.js?v=1.74.0';
+import { buildTspl } from './core/tspl.js?v=1.74.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.74.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.74.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.74.0';
+import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.74.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.74.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -654,11 +654,11 @@ function renderSummary() {
     }
     li.append(badge);
 
-    // 已打印 / 需打印 的组可以「补打」
-    if (s.status === 'done' || s.status === 'pending') {
+    // 已打印 / 需打印 / 需重打 的组都可以补打/重打
+    if (s.status === 'done' || s.status === 'pending' || s.status === 'dirty') {
       const re = document.createElement('button');
       re.className = 'reprint';
-      re.textContent = '补打';
+      re.textContent = s.status === 'dirty' ? '重打' : '补打';
       re.type = 'button';
       re.onclick = () => reprintGroup(s.group);
       li.append(re);
@@ -750,16 +750,15 @@ function warnStaleTotal() {
 }
 
 async function onPrintOk() {
-  // 补打「本组」：只打印；若该组原为「需打印」，补打后标记为已打印
+  // 补打/重打「本组」：只打印；打印后标记为已打印（需打印/需重打都会转成已打印）
   if (printContext.mode === 'reprint' && !printContext.isTotal) {
     el.dlgPrint.close();
-    // 弹框里改过类型 → 持久化到该枚目并重建标签再打印
+    // 弹框里改过类型 → 重建标签再打印
     if (printContext.typeOverride) {
-      store.setGroupBillType(printContext.groupNo, printContext.typeOverride);
       printContext.groupLabel = store.buildGroupLabelFor(printContext.groupNo, printContext.typeOverride) || printContext.groupLabel;
     }
     await doPrint(printContext.groupLabel);
-    if (printContext.wasPending) store.markPrinted(printContext.groupNo);
+    store.markPrinted(printContext.groupNo, printContext.typeOverride || null);
     renderAll();
     warnStaleTotal();
     return;
