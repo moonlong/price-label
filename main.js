@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.74.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.74.0';
-import { buildCpcl } from './core/cpcl.js?v=1.74.0';
-import { buildTspl } from './core/tspl.js?v=1.74.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.74.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.74.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.74.0';
-import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.74.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.74.0';
+import { Store } from './core/store.js?v=1.75.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.75.0';
+import { buildCpcl } from './core/cpcl.js?v=1.75.0';
+import { buildTspl } from './core/tspl.js?v=1.75.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.75.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.75.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.75.0';
+import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.75.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.75.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -767,7 +767,8 @@ async function onPrintOk() {
   //   1) 本组结束 + 最后一组
   //   2) 补打 + 最后一组
   if (printContext.isTotal) {
-    const unprinted = store.unprintedGroups();
+    // 当前正在打的这一组马上就会打印并转「已打印」，不应再算作「需重打」而重复提示
+    const unprinted = store.unprintedGroups().filter((n) => n !== printContext.groupNo);
     if (unprinted.length > 0) {
       const ok = await confirmDialog(`${unprinted.join('、')}枚目 需打印/需重打，是否继续合计？`);
       if (!ok) return;
