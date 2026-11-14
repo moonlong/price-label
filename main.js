@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.76.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.76.0';
-import { buildCpcl } from './core/cpcl.js?v=1.76.0';
-import { buildTspl } from './core/tspl.js?v=1.76.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.76.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.76.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.76.0';
-import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.76.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.76.0';
+import { Store } from './core/store.js?v=1.77.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.77.0';
+import { buildCpcl } from './core/cpcl.js?v=1.77.0';
+import { buildTspl } from './core/tspl.js?v=1.77.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.77.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.77.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.77.0';
+import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.77.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.77.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -846,9 +846,11 @@ function openReprintPrint(r, showToggle = false) {
 
 function onPrintSkip() {
   el.dlgPrint.close();
-  store.commitGroupWithoutPrint(printContext.groupNo);
+  const r = store.commitGroupWithoutPrint(printContext.groupNo);
   renderAll();
-  toast(`${printContext.groupNo}枚目 已结束（需打印）`, 3500);
+  if (!r.ok) return toast(r.error);
+  const label = r.status === 'dirty' ? '需重打' : '需打印';
+  toast(`${printContext.groupNo}枚目 已结束（${label}）`, 3500);
 }
 
 async function doPrint(label) {

@@ -430,13 +430,14 @@ export class Store {
   commitGroupWithoutPrint(groupNo) {
     const g = this._group(groupNo);
     if (!g || g.entries.length === 0) return { ok: false, error: '该枚目没有金额' };
+    // 从没打印过 → pending；打印过又改过 → 保持 dirty（需重打）
     if (g.status === 'in-progress') g.status = 'pending';
     g.verifyBaseline = null;
     g.committedCount = g.entries.length;
     g.billType = this.billType();
     if (this.session.group === groupNo && this.session.group < MAX_GROUP) this.session.group += 1;
     this._persist();
-    return { ok: true };
+    return { ok: true, status: g.status };
   }
 
   /** 补打/重打后标记为已打印（同步 committedCount，避免后续「追加条数」算错）。 */
