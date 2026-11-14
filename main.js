@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.77.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.77.0';
-import { buildCpcl } from './core/cpcl.js?v=1.77.0';
-import { buildTspl } from './core/tspl.js?v=1.77.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.77.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.77.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.77.0';
-import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.77.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.77.0';
+import { Store } from './core/store.js?v=1.78.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.78.0';
+import { buildCpcl } from './core/cpcl.js?v=1.78.0';
+import { buildTspl } from './core/tspl.js?v=1.78.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.78.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.78.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.78.0';
+import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.78.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.78.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -750,6 +750,8 @@ function warnStaleTotal() {
 }
 
 async function onPrintOk() {
+  // 弹框里改的类型，只有点「打印」时才真正生效（取消则保持原类型）
+  if (printContext.typeOverride) store.setBillType(printContext.typeOverride);
   // 补打/重打「本组」：只打印；打印后标记为已打印（需打印/需重打都会转成已打印）
   if (printContext.mode === 'reprint' && !printContext.isTotal) {
     el.dlgPrint.close();
@@ -989,12 +991,11 @@ el.lastGroupToggle.addEventListener('change', () => {
 });
 
 // 打印弹框里改类型：同步整单类型 + 刷新预览
+// 弹框里只记录「本次选择」，不立刻改整单类型；点「打印」时才真正生效，取消则自动作废。
 el.printTypeSeg.addEventListener('click', (e) => {
   const btn = e.target.closest('.seg');
   if (!btn || !printContext) return;
-  const type = btn.dataset.type;
-  printContext.typeOverride = type;
-  store.setBillType(type);
+  printContext.typeOverride = btn.dataset.type;
   renderPrintPreview();
 });
 
