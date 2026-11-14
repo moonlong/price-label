@@ -522,3 +522,28 @@ test('需重打(dirty)组可以重打，打印后转为已打印（修复“没�
   s.removeEntry(2, 0);
   assert.equal(s.reprintGroup(2).ok, false);
 });
+
+test('清空全部：彻底重置会话（不再残留合计提醒状态）', () => {
+  const s = fresh(2);
+  s.setBillType('special');
+  s.setGroup(1); s.addEntry('1000'); s.commitGroup(1);
+  s.finalizeTotal(1, 1000);
+  s.restoreOrder(s.history.length - 1);
+  assert.notEqual(s.session.restoredTotal, null); // 恢复后有合计
+  s.clearAll();
+  assert.equal(s.session.customerNo, null);
+  assert.equal(s.session.restoredTotal, null); // 关键：清空后不再残留提醒
+  assert.equal(s.session.billType, 'normal');
+  assert.equal(s.grandTotal(), 0);
+});
+
+test('清空唯一一组后，也不再残留合计提醒', () => {
+  const s = fresh(2);
+  s.setGroup(1); s.addEntry('1000'); s.commitGroup(1);
+  s.finalizeTotal(1, 1000);
+  s.restoreOrder(s.history.length - 1);
+  assert.notEqual(s.session.restoredTotal, null);
+  s.setGroup(1);
+  assert.equal(s.clearCurrentGroup().ok, true);
+  assert.equal(s.session.restoredTotal, null); // 已无已结算组
+});

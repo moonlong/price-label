@@ -548,9 +548,9 @@ export class Store {
   }
 
   clearAll() {
-    this.session.groups = {};
-    this.session.group = 1;
-    this.session.customerNo = null; // 取消选中，回到默认
+    // 整单作废：彻底重置会话（取消选中、清空组、清空 restoredTotal/billType），
+    // 否则清空后仍会残留「合计已变更，请重打…」的提醒。
+    this.session = emptySession();
     this._persist();
     return { ok: true };
   }
@@ -563,6 +563,8 @@ export class Store {
     g.entries = [];
     g.status = 'in-progress';
     g.verifyBaseline = null;
+    // 已没有任何已结算的组 → 不再残留「合计需重打」提醒
+    if (this.summary().length === 0) this.session.restoredTotal = null;
     this._persist();
     return { ok: true };
   }
