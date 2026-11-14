@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.72.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.72.0';
-import { buildCpcl } from './core/cpcl.js?v=1.72.0';
-import { buildTspl } from './core/tspl.js?v=1.72.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.72.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.72.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.72.0';
-import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.72.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.72.0';
+import { Store } from './core/store.js?v=1.73.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.73.0';
+import { buildCpcl } from './core/cpcl.js?v=1.73.0';
+import { buildTspl } from './core/tspl.js?v=1.73.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.73.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.73.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.73.0';
+import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.73.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.73.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -44,7 +44,7 @@ const el = {
   history: $('history'),
   clear: $('clear'),
   dlgPrint: $('dlg-print'),
-  printType: $('print-type'),
+  printTypeSeg: $('print-type-seg'),
   printPreview: $('print-preview'),
   printRecords: $('print-records'),
   printVerified: $('print-verified'),
@@ -705,18 +705,28 @@ function resetDeductionUI() {
 }
 
 // ---------- 打印预览 ----------
+/** 当前这次打印实际使用的类型（弹框里改过则用改的；否则合计=1枚目、组=该组自身）。 */
+function currentPrintType() {
+  if (!printContext) return store.billType();
+  if (printContext.typeOverride === 'special' || printContext.typeOverride === 'normal') return printContext.typeOverride;
+  if (printContext.isTotal) return store.orderBillType();
+  return store.groupBillType(printContext.groupNo);
+}
+
 function renderPrintPreview() {
   el.printPreview.innerHTML = '';
   if (!printContext) return;
-  // 醒目显示本单类型（普货/特货）
-  const bt = store.billType();
-  el.printType.hidden = false;
-  el.printType.textContent = bt === 'special' ? '特货' : '普货';
-  el.printType.classList.toggle('special', bt === 'special');
+  const bt = currentPrintType();
+  // 同步分段控件选中态
+  el.printTypeSeg.querySelectorAll('.seg').forEach((b) => {
+    b.classList.toggle('active', b.dataset.type === bt);
+  });
   let label;
   if (printContext.isTotal) {
-    label = store.totalLabel(printContext.groupNo, printContext.groupTotal, printContext.deduction);
+    label = store.totalLabel(printContext.groupNo, printContext.groupTotal, printContext.deduction, bt);
   } else {
+    // 用当前类型重建组标签（保证改了类型后预览/打印一致）
+    printContext.groupLabel = store.buildGroupLabelFor(printContext.groupNo, bt) || printContext.groupLabel;
     label = printContext.groupLabel;
   }
   try {
@@ -743,6 +753,11 @@ async function onPrintOk() {
   // 补打「本组」：只打印；若该组原为「需打印」，补打后标记为已打印
   if (printContext.mode === 'reprint' && !printContext.isTotal) {
     el.dlgPrint.close();
+    // 弹框里改过类型 → 持久化到该枚目并重建标签再打印
+    if (printContext.typeOverride) {
+      store.setGroupBillType(printContext.groupNo, printContext.typeOverride);
+      printContext.groupLabel = store.buildGroupLabelFor(printContext.groupNo, printContext.typeOverride) || printContext.groupLabel;
+    }
     await doPrint(printContext.groupLabel);
     if (printContext.wasPending) store.markPrinted(printContext.groupNo);
     renderAll();
@@ -763,13 +778,14 @@ async function onPrintOk() {
   let label;
   let doneName = null;
   if (printContext.isTotal) {
-    const res = store.finalizeTotal(printContext.groupNo, printContext.groupTotal, printContext.deduction);
+    const res = store.finalizeTotal(printContext.groupNo, printContext.groupTotal, printContext.deduction, printContext.typeOverride || null);
     if (!res.ok) return toast(res.error);
     label = res.label;
     doneName = res.lastOrder.customerName;
   } else {
-    store.commitGroup(printContext.groupNo);
-    label = printContext.groupLabel;
+    store.commitGroup(printContext.groupNo, printContext.typeOverride || null);
+    // 确保打印的是「当前类型」重建后的标签
+    label = store.buildGroupLabelFor(printContext.groupNo, printContext.typeOverride || null) || printContext.groupLabel;
   }
   await doPrint(label);
   if (printContext.isTotal) toast(`${doneName} 结算已完成`, 3500);
@@ -795,7 +811,7 @@ function renderPrintRecords(verified) {
 }
 
 function openFinishPrint(r, verified = false) {
-  printContext = { mode: 'finish', groupNo: r.groupNo, groupTotal: r.groupTotal, groupLabel: r.label, isTotal: false, deduction: null };
+  printContext = { mode: 'finish', groupNo: r.groupNo, groupTotal: r.groupTotal, groupLabel: r.label, isTotal: false, deduction: null, typeOverride: null };
   el.lastGroupToggle.checked = false;
   el.lastGroupToggle.closest('.last-toggle').style.display = '';
   resetDeductionUI();
@@ -815,7 +831,7 @@ function openFinishPrint(r, verified = false) {
 }
 
 function openReprintPrint(r, showToggle = false) {
-  printContext = { mode: 'reprint', groupNo: r.groupNo, groupTotal: r.groupTotal, groupLabel: r.label, isTotal: false, deduction: null, wasPending: r.wasPending };
+  printContext = { mode: 'reprint', groupNo: r.groupNo, groupTotal: r.groupTotal, groupLabel: r.label, isTotal: false, deduction: null, wasPending: r.wasPending, typeOverride: null };
   el.lastGroupToggle.checked = false;
   el.lastGroupToggle.closest('.last-toggle').style.display = showToggle ? '' : 'none';
   resetDeductionUI();
@@ -967,6 +983,16 @@ el.lastGroupToggle.addEventListener('change', () => {
     resetDeductionUI();
     printContext.deduction = null;
   }
+  renderPrintPreview();
+});
+
+// 打印弹框里改类型：同步整单类型 + 刷新预览
+el.printTypeSeg.addEventListener('click', (e) => {
+  const btn = e.target.closest('.seg');
+  if (!btn || !printContext) return;
+  const type = btn.dataset.type;
+  printContext.typeOverride = type;
+  store.setBillType(type);
   renderPrintPreview();
 });
 

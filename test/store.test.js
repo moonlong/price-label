@@ -453,3 +453,48 @@ test('lastSettledGroup：返回最大已结算枚目', () => {
   assert.equal(s.isLastSettledGroup(3), true);
   assert.equal(s.isLastSettledGroup(1), false);
 });
+
+test('混合类型：本单类型以1枚目为准，弹框可覆盖', () => {
+  const s = fresh(2);
+  // 1枚目：普货
+  s.setGroup(1); s.addEntry('1000'); s.commitGroup(1);
+  assert.equal(s.groupBillType(1), 'normal');
+  // 改特货，2枚目
+  s.setBillType('special');
+  s.setGroup(2); s.addEntry('2000'); s.commitGroup(2);
+  assert.equal(s.groupBillType(2), 'special');
+  // 本单类型 = 1枚目 → 普货
+  assert.equal(s.orderBillType(), 'normal');
+  // 合计默认用 1枚目（P），显式覆盖则用 W
+  assert.match(s.totalLabel(2, 2000).date, /P$/);
+  assert.match(s.totalLabel(2, 2000, null, 'special').date, /W$/);
+  // 归档：默认用 1枚目（普货）
+  const res = s.finalizeTotal(2, 2000);
+  assert.match(res.label.date, /P$/);
+  assert.equal(s.getHistory()[0].billType, 'normal');
+  assert.equal(s.lastOrder.billType, 'normal');
+  // 组明细里各自保留类型
+  assert.equal(s.getHistory()[0].groups[0].billType, 'normal');
+  assert.equal(s.getHistory()[0].groups[1].billType, 'special');
+});
+
+test('弹框改类型：finalizeTotal 覆盖为特货', () => {
+  const s = fresh(2);
+  s.setGroup(1); s.addEntry('1000'); s.commitGroup(1); // 普货
+  s.setBillType('special');
+  s.setGroup(2); s.addEntry('2000'); s.commitGroup(2);
+  const res = s.finalizeTotal(2, 2000, null, 'special'); // 弹框显式改特货
+  assert.match(res.label.date, /W$/);
+  assert.equal(s.getHistory()[0].billType, 'special');
+});
+
+test('补打某枚目用该枚目自己的类型；可在弹框里改', () => {
+  const s = fresh(2);
+  s.setGroup(1); s.addEntry('1000'); s.commitGroup(1); // 普货
+  s.setBillType('special');
+  s.setGroup(2); s.addEntry('2000'); s.commitGroup(2); // 特货
+  assert.match(s.reprintGroup(1).label.date, /P$/); // 1枚目自己 = 普货
+  assert.match(s.reprintGroup(2).label.date, /W$/); // 2枚目自己 = 特货
+  s.setGroupBillType(1, 'special');
+  assert.match(s.reprintGroup(1).label.date, /W$/); // 改后变特货
+});

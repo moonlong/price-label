@@ -65,7 +65,7 @@ html, body {
 .context-bar .c-name.empty { color: var(--muted); font-weight: 500; }
 .context-bar .c-group { font-size: 13px; color: var(--muted); font-weight: 500; flex: none; }
 /* 普货/特货 分段选择器：两个选项都上色、当前选中高亮，一眼可点 */
-.context-bar .bill-seg {
+.bill-seg {
   display: inline-flex;
   flex: none;
   border: 1.5px solid #cbd5e1;
@@ -74,7 +74,7 @@ html, body {
   background: #fff;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
-.context-bar .bill-seg .seg {
+.bill-seg .seg {
   border: none;
   background: transparent;
   color: #475569;
@@ -84,15 +84,17 @@ html, body {
   cursor: pointer;
   line-height: 1.2;
 }
-.context-bar .bill-seg .seg:active { filter: brightness(0.95); }
-.context-bar .bill-seg .seg.active[data-type="normal"] {
+.bill-seg .seg:active { filter: brightness(0.95); }
+.bill-seg .seg.active[data-type="normal"] {
   background: var(--blue);
   color: #fff;
 }
-.context-bar .bill-seg .seg.active[data-type="special"] {
+.bill-seg .seg.active[data-type="special"] {
   background: #ea580c;
   color: #fff;
 }
+/* 打印弹框里的类型选择器 */
+.print-type-seg { margin: 0 0 10px; }
 
 /* 客户搜索框 */
 .customer-search {
@@ -519,21 +521,6 @@ html, body {
 .dialog.wide { width: min(94vw, 480px); }
 .dialog::backdrop { background: rgba(15, 23, 42, 0.5); }
 .dialog-title { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
-/* 打印预览里的醒目类型徽标（普货/特货），与上下文栏分段控件保持一致 */
-.print-type {
-  display: inline-block;
-  align-self: flex-start;
-  margin: 0 0 10px;
-  font-size: 14px;
-  font-weight: 700;
-  padding: 5px 16px;
-  border-radius: 999px;
-  border: 1.5px solid #cbd5e1;
-  background: var(--blue);
-  color: #fff;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
-}
-.print-type.special { background: #ea580c; }
 .dialog-body { font-size: 15px; color: var(--text); margin-bottom: 12px; }
 .dialog-actions { display: flex; gap: 10px; justify-content: flex-end; }
 .dialog-actions.stack { flex-direction: column; }

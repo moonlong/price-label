@@ -250,6 +250,29 @@ export class Store {
 
   billType() { return this.session.billType === 'special' ? 'special' : 'normal'; }
 
+  /** 显式设置某枚目的类型（补打时在弹框里改类型用）。 */
+  setGroupBillType(n, type) {
+    const g = this._group(n);
+    if (!g) return { ok: false, error: '该枚目不存在' };
+    g.billType = type === 'special' ? 'special' : 'normal';
+    this._persist();
+    return { ok: true };
+  }
+
+  /** 某枚目自己的类型（已提交的组用记录值，否则用当前会话类型）。 */
+  groupBillType(n) {
+    const g = this._group(n);
+    if (g && g.billType) return g.billType === 'special' ? 'special' : 'normal';
+    return this.billType();
+  }
+
+  /** 本单权威类型：以 1枚目为准（没有 1枚目则用当前会话类型）。 */
+  orderBillType() {
+    const g1 = this._group(1);
+    if (g1 && g1.billType) return g1.billType === 'special' ? 'special' : 'normal';
+    return this.billType();
+  }
+
   addEntry(expr) {
     const g = this._ensureGroup(this.session.group);
     const ev = evaluateExpression(expr);
@@ -309,7 +332,7 @@ export class Store {
       const g = this._group(n);
       if (!g) continue;
       if (g.status === 'done' || g.status === 'dirty' || g.status === 'pending') {
-        out.push({ group: n, subtotal: this._subtotal(g), status: g.status, count: g.entries.length });
+        out.push({ group: n, subtotal: this._subtotal(g), status: g.status, count: g.entries.length, billType: g.billType || null });
       }
     }
     return out;
@@ -390,13 +413,14 @@ export class Store {
     return { ok: true, action: 'done', groupNo, groupTotal: subtotal, label: buildGroupLabel(this.customerName(), groupNo, subtotal, formatDate(), { billType: this.billType() }) };
   }
 
-  /** 标记该枚目为已打印，并推进到下一枚目（在打印确认后调用）。 */
-  commitGroup(groupNo) {
+  /** 标记该枚目为已打印，并推进到下一枚目（在打印确认后调用）。billType 可选（打印弹框里改的类型）。 */
+  commitGroup(groupNo, billType = null) {
     const g = this._group(groupNo);
     if (!g || g.entries.length === 0) return { ok: false, error: '该枚目没有金额' };
     g.status = 'done';
     g.verifyBaseline = null;
     g.committedCount = g.entries.length;
+    g.billType = billType === 'special' || billType === 'normal' ? billType : this.billType();
     if (this.session.group === groupNo && this.session.group < MAX_GROUP) this.session.group += 1;
     this._persist();
     return { ok: true };
@@ -409,6 +433,7 @@ export class Store {
     if (g.status === 'in-progress') g.status = 'pending';
     g.verifyBaseline = null;
     g.committedCount = g.entries.length;
+    g.billType = this.billType();
     if (this.session.group === groupNo && this.session.group < MAX_GROUP) this.session.group += 1;
     this._persist();
     return { ok: true };
@@ -423,29 +448,32 @@ export class Store {
     return { ok: true };
   }
 
-  /** 合计预览标签（不改变状态）：本组 + 总额（含当前组）。deduction 可选。 */
-  totalLabel(groupNo, groupTotal, deduction = null) {
+  /** 合计预览标签（不改变状态）：本组 + 总额（含当前组）。deduction / billType 可选。 */
+  totalLabel(groupNo, groupTotal, deduction = null, billType = null) {
     const g = this._group(groupNo);
     const counted = g && (g.status === 'done' || g.status === 'dirty' || g.status === 'pending');
     const total = this.grandTotal() + (counted ? 0 : groupTotal);
     const groupCount = this.summary().length + (counted ? 0 : 1);
-    return buildTotalLabel(this.customerName(), groupNo, groupTotal, total, formatDate(), { singleGroup: groupCount === 1, deduction, billType: this.billType() });
+    const bt = billType === 'special' || billType === 'normal' ? billType : this.orderBillType();
+    return buildTotalLabel(this.customerName(), groupNo, groupTotal, total, formatDate(), { singleGroup: groupCount === 1, deduction, billType: bt });
   }
 
-  /** 合计打印：标记当前组完成、归档最近一单、清空、追加历史（含组明细）。deduction 可选。 */
-  finalizeTotal(groupNo, groupTotal, deduction = null) {
-    this.commitGroup(groupNo);
+  /** 合计打印：标记当前组完成、归档最近一单、清空、追加历史（含组明细）。deduction / billType 可选。 */
+  finalizeTotal(groupNo, groupTotal, deduction = null, billType = null) {
+    this.commitGroup(groupNo, billType);
     const total = this.grandTotal();
     const customerName = this.customerName();
-    const groupSummary = this.summary().map((s) => ({ group: s.group, subtotal: s.subtotal }));
-    const label = buildTotalLabel(customerName, groupNo, groupTotal, total, formatDate(), { singleGroup: groupSummary.length === 1, deduction, billType: this.billType() });
+    // 本单权威类型：1枚目为准；若打印弹框里显式改过，以改的为准
+    const bt = billType === 'special' || billType === 'normal' ? billType : this.orderBillType();
+    const groupSummary = this.summary().map((s) => ({ group: s.group, subtotal: s.subtotal, billType: s.billType }));
+    const label = buildTotalLabel(customerName, groupNo, groupTotal, total, formatDate(), { singleGroup: groupSummary.length === 1, deduction, billType: bt });
     this.lastOrder = {
       customerNo: this.session.customerNo,
       customerName,
       groups: groupSummary,
       grandTotal: total,
       date: formatDate(),
-      billType: this.billType(),
+      billType: bt,
     };
     this.history.push({
       date: formatDate(),
@@ -454,7 +482,7 @@ export class Store {
       customerNo: this.session.customerNo,
       total,
       groups: groupSummary,
-      billType: this.billType(),
+      billType: bt,
       ts: Date.now(),
     });
     this.session = emptySession(); // 取消选中客户，回到默认
@@ -495,6 +523,7 @@ export class Store {
         status: 'done',
         verifyBaseline: null,
         committedCount: 1,
+        billType: g.billType === 'special' ? 'special' : (g.billType === 'normal' ? 'normal' : (h.billType === 'special' ? 'special' : 'normal')),
       };
       if (gn < minGroup) minGroup = gn;
     }
@@ -546,10 +575,19 @@ export class Store {
     return { ok: true };
   }
 
-  reprintGroup(n) {
+  reprintGroup(n, billType = null) {
     const g = this._group(n);
     if (!g || (g.status !== 'done' && g.status !== 'pending')) return { ok: false, error: '该枚目没有可补打的内容' };
-    return { ok: true, groupNo: n, groupTotal: this._subtotal(g), label: buildGroupLabel(this.customerName(), n, this._subtotal(g), formatDate(), { billType: this.billType() }), wasPending: g.status === 'pending' };
+    const bt = billType === 'special' || billType === 'normal' ? billType : this.groupBillType(n);
+    return { ok: true, groupNo: n, groupTotal: this._subtotal(g), label: buildGroupLabel(this.customerName(), n, this._subtotal(g), formatDate(), { billType: bt }), wasPending: g.status === 'pending' };
+  }
+
+  /** 用指定类型重建某枚目的标签（打印弹框里改类型时用）。 */
+  buildGroupLabelFor(n, billType = null) {
+    const g = this._group(n);
+    if (!g) return null;
+    const bt = billType === 'special' || billType === 'normal' ? billType : this.groupBillType(n);
+    return buildGroupLabel(this.customerName(), n, this._subtotal(g), formatDate(), { billType: bt });
   }
 
   /** 最后一组（已打印/需重打/需打印中的最大编号）；没有则返回 null。 */
