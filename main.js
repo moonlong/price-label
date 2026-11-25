@@ -1,12 +1,12 @@
-import { Store } from './core/store.js?v=1.78.0';
-import { formatMoney, formatDate } from './core/label.js?v=1.78.0';
-import { buildCpcl } from './core/cpcl.js?v=1.78.0';
-import { buildTspl } from './core/tspl.js?v=1.78.0';
-import { buildEscposRaster } from './core/escpos.js?v=1.78.0';
-import { buildTsplRaster } from './core/tspl-raster.js?v=1.78.0';
-import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.78.0';
-import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.78.0';
-import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.78.0';
+import { Store } from './core/store.js?v=1.79.0';
+import { formatMoney, formatDate } from './core/label.js?v=1.79.0';
+import { buildCpcl } from './core/cpcl.js?v=1.79.0';
+import { buildTspl } from './core/tspl.js?v=1.79.0';
+import { buildEscposRaster } from './core/escpos.js?v=1.79.0';
+import { buildTsplRaster } from './core/tspl-raster.js?v=1.79.0';
+import { renderLabelBitmap, bitmapToCanvas, printToDots } from './core/raster.js?v=1.79.0';
+import { buildProductLabel, buildProductNameLabel, renderProductLabelBitmap, ProductLabelBatch } from './core/label-product.js?v=1.79.0';
+import { buildNiimbotCommands, buildPrintStatusPacket, buildPrintEndPacket } from './core/niimbot.js?v=1.79.0';
 
 const storage = (typeof localStorage !== 'undefined') ? localStorage : null;
 const store = new Store(storage);
@@ -296,6 +296,11 @@ class PrintService {
       }
     }
     return null;
+  }
+
+  /** 打印机是否已就绪（已连接且找到写特征）。 */
+  isReady() {
+    return !!(this.server && this.writeChar);
   }
 
   /** 打印一张标签。opts: { labelSize, print, noDate, proto }，缺省用结算的尺寸/偏移。 */
@@ -749,50 +754,61 @@ function warnStaleTotal() {
   if (last) toast(`合计已变更，请重打 ${last}枚目（附合计）`, 4000);
 }
 
+let settlePrintBusy = false; // 防止连点导致重复打印
+
 async function onPrintOk() {
-  // 弹框里改的类型，只有点「打印」时才真正生效（取消则保持原类型）
-  if (printContext.typeOverride) store.setBillType(printContext.typeOverride);
-  // 补打/重打「本组」：只打印；打印后标记为已打印（需打印/需重打都会转成已打印）
-  if (printContext.mode === 'reprint' && !printContext.isTotal) {
+  if (settlePrintBusy) return;
+  settlePrintBusy = true;
+  try {
+    // 未连接打印机 → 先提示；弹窗与页面数据都保持不变
+    if (!settlePrint.isReady()) return toast('请先连接打印机', 3500);
+
+    // 合计前确认：只提醒「除当前组之外」还没处理的组
+    if (printContext.isTotal) {
+      const unprinted = store.unprintedGroups().filter((n) => n !== printContext.groupNo);
+      if (unprinted.length > 0) {
+        const ok = await confirmDialog(`${unprinted.join('、')}枚目 需打印/需重打，是否继续合计？`);
+        if (!ok) return;
+      }
+    }
+
+    // 1) 先按「预览」生成要打印的标签（与弹框所见一致）
+    const printedType = currentPrintType();
+    let label;
+    if (printContext.isTotal) {
+      label = store.totalLabel(printContext.groupNo, printContext.groupTotal, printContext.deduction, printedType);
+    } else {
+      label = store.buildGroupLabelFor(printContext.groupNo, printedType) || printContext.groupLabel;
+      printContext.groupLabel = label;
+    }
+
+    // 2) 先打印；失败则弹窗不关、数据一律不变（不会清空、也不会误报完成）
+    const ok = await doPrint(label);
+    if (!ok) return;
+
+    // 3) 打印成功后才真正生效：应用类型 + 提交/归档
+    store.setBillType(printedType);
     el.dlgPrint.close();
-    // 弹框里改过类型 → 重建标签再打印
-    if (printContext.typeOverride) {
-      printContext.groupLabel = store.buildGroupLabelFor(printContext.groupNo, printContext.typeOverride) || printContext.groupLabel;
+    // 补打/重打「本组」：标记已打印
+    if (printContext.mode === 'reprint' && !printContext.isTotal) {
+      store.markPrinted(printContext.groupNo, printedType);
+      renderAll();
+      warnStaleTotal();
+      return;
     }
-    await doPrint(printContext.groupLabel);
-    store.markPrinted(printContext.groupNo, printContext.typeOverride || null);
-    renderAll();
-    warnStaleTotal();
-    return;
-  }
-  // 其余两种情况都算「合计」并完成本单：
-  //   1) 本组结束 + 最后一组
-  //   2) 补打 + 最后一组
-  if (printContext.isTotal) {
-    // 当前正在打的这一组马上就会打印并转「已打印」，不应再算作「需重打」而重复提示
-    const unprinted = store.unprintedGroups().filter((n) => n !== printContext.groupNo);
-    if (unprinted.length > 0) {
-      const ok = await confirmDialog(`${unprinted.join('、')}枚目 需打印/需重打，是否继续合计？`);
-      if (!ok) return;
+    if (printContext.isTotal) {
+      const res = store.finalizeTotal(printContext.groupNo, printContext.groupTotal, printContext.deduction, printedType);
+      if (!res.ok) return toast(res.error);
+      renderAll();
+      toast(`${res.lastOrder.customerName} 结算已完成`, 3500);
+    } else {
+      store.commitGroup(printContext.groupNo, printedType);
+      renderAll();
+      warnStaleTotal();
     }
+  } finally {
+    settlePrintBusy = false;
   }
-  el.dlgPrint.close();
-  let label;
-  let doneName = null;
-  if (printContext.isTotal) {
-    const res = store.finalizeTotal(printContext.groupNo, printContext.groupTotal, printContext.deduction, printContext.typeOverride || null);
-    if (!res.ok) return toast(res.error);
-    label = res.label;
-    doneName = res.lastOrder.customerName;
-  } else {
-    store.commitGroup(printContext.groupNo, printContext.typeOverride || null);
-    // 确保打印的是「当前类型」重建后的标签
-    label = store.buildGroupLabelFor(printContext.groupNo, printContext.typeOverride || null) || printContext.groupLabel;
-  }
-  await doPrint(label);
-  if (printContext.isTotal) toast(`${doneName} 结算已完成`, 3500);
-  renderAll();
-  if (!printContext.isTotal) warnStaleTotal();
 }
 
 function renderPrintRecords(verified) {
@@ -859,8 +875,10 @@ async function doPrint(label) {
   try {
     await settlePrint.print(label);
     toast('打印完成');
+    return true;
   } catch (e) {
-    toast('打印失败：' + (e && e.message ? e.message : e));
+    toast('打印失败：' + (e && e.message ? e.message : e), 5000);
+    return false;
   }
 }
 
